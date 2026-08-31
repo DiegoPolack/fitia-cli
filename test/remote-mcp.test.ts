@@ -97,8 +97,12 @@ test("remote boundary rejects unconfigured hosts and origins", async () => {
   expect(wrongOrigin.status).toBe(403);
 });
 
-test("read-only grants cannot discover write tools", async () => {
-  const server = createServer({ token: "", canWrite: false });
+test("read-only grants discover write tools and receive a scope-upgrade challenge", async () => {
+  const server = createServer({
+    token: "",
+    canWrite: false,
+    resourceMetadataUrl: "https://api.example.test/.well-known/oauth-protected-resource/mcp",
+  });
   const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
   await server.connect(serverTransport);
   await clientTransport.start();
@@ -119,9 +123,34 @@ test("read-only grants cannot discover write tools", async () => {
   response = receive();
   await clientTransport.send({ jsonrpc: "2.0", id: 2, method: "tools/list", params: {} });
   const tools = (await response).result.tools;
-  expect(tools).toHaveLength(9);
-  expect(tools.some((tool: { name: string }) => tool.name === "fitia-meal-log")).toBe(false);
-  expect(tools.some((tool: { name: string }) => tool.name === "fitia-meal-remove")).toBe(false);
+  expect(tools).toHaveLength(12);
+  const writeTool = tools.find((tool: { name: string }) => tool.name === "fitia-meal-log");
+  expect(writeTool._meta.securitySchemes).toEqual([{ type: "oauth2", scopes: ["fitia:read", "fitia:write"] }]);
+
+  response = receive();
+  await clientTransport.send({
+    jsonrpc: "2.0",
+    id: 3,
+    method: "tools/call",
+    params: {
+      name: "fitia-meal-log",
+      arguments: {
+        date: "2026-08-31",
+        meal: "breakfast",
+        name: "Scope test",
+        caloriesKcal: 1,
+        proteinG: 0,
+        carbsG: 0,
+        fatG: 0,
+        confirm: false,
+      },
+    },
+  });
+  const denied = (await response).result;
+  expect(denied.isError).toBe(true);
+  expect(denied._meta["mcp/www_authenticate"]).toEqual([
+    'Bearer resource_metadata="https://api.example.test/.well-known/oauth-protected-resource/mcp", scope="fitia:write", error="insufficient_scope", error_description="This tool requires fitia:write"',
+  ]);
   await clientTransport.close();
 });
 

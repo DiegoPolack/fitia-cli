@@ -119,10 +119,11 @@ export function createRemoteApp(env: RemoteEnv) {
     scopesSupported: ["fitia:read", "fitia:write"],
     resourceName: "Fitia MCP",
   };
+  const resourceMetadataUrl = getOAuthProtectedResourceMetadataUrl(resource);
   const gate = requireBearerAuth({
     verifier: clerkTokenVerifier({ issuer, audience: resource.href, jwtKey: env.CLERK_JWT_KEY }),
     requiredScopes: ["fitia:read"],
-    resourceMetadataUrl: getOAuthProtectedResourceMetadataUrl(resource),
+    resourceMetadataUrl,
   });
   const app = createMcpHonoApp({
     host: "0.0.0.0",
@@ -189,6 +190,7 @@ export function createRemoteApp(env: RemoteEnv) {
         token: session?.idToken,
         trustedAccountId: session?.uid,
         canWrite: auth.scopes.includes("fitia:write"),
+        resourceMetadataUrl,
       }),
     );
     const parsedBody = (context.var as { parsedBody?: unknown }).parsedBody;

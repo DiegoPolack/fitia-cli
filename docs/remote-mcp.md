@@ -5,7 +5,7 @@ The remote endpoint is a Cloudflare Worker using Hono, Clerk OAuth, and a Neon P
 ## Security boundaries
 
 - `POST /mcp` requires a Clerk OAuth token with `fitia:read` and an exact audience of the configured `MCP_RESOURCE`.
-- Tools that write are registered only when the grant includes `fitia:write`; their handlers also recheck that permission.
+- Write tools declare `fitia:write` in their security metadata and remain discoverable to read-only grants so clients can request upgraded authorization. Their handlers recheck the permission and return an OAuth `insufficient_scope` challenge without running the operation when it is absent.
 - A Clerk token is never forwarded to Fitia. Each Clerk user resolves only the row keyed by that Clerk user ID.
 - Fitia ID and refresh tokens are encrypted with AES-256-GCM. The Clerk user ID and verified Fitia account ID are authenticated as associated data.
 - Refresh rotation updates the encrypted row with a version compare-and-swap. A losing concurrent request reloads the winning row instead of overwriting it.
