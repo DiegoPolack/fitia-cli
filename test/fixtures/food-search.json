@@ -1,0 +1,30 @@
+{
+  "total": { "value": 1, "relation": "eq" },
+  "hits": [
+    {
+      "_id": "search-engine-internal-id",
+      "_source": {
+        "object_id": "synthetic-food-id",
+        "name": "Synthetic sample",
+        "brand": { "name": "Example brand" },
+        "source": "verified",
+        "collection": "food",
+        "subcollection": "default",
+        "cooking_state": "Raw",
+        "nutrients": {
+          "calories": { "unit": "kcal", "size": 1.2 },
+          "protein": { "unit": "g", "size": 0.225 },
+          "carbs": { "unit": "g", "size": 0 },
+          "fat": { "unit": "g", "size": 0.0262 },
+          "fiber": null
+        },
+        "servings": [
+          { "name": "sample serving", "size": 120, "unit": "g", "quantity": "1", "default": false },
+          { "name": "gram", "size": 1, "unit": "g", "quantity": "1", "default": true }
+        ],
+        "packaging_photo_url": "https://example.invalid/secret-omitted",
+        "keywords": ["private omitted"]
+      }
+    }
+  ]
+}

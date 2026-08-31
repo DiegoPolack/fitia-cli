@@ -1,0 +1,10 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "references": {
+    "effect-smol": {
+      "repository": "Effect-TS/effect-smol",
+      "branch": "main",
+      "description": "Historical Effect V4 source, migration guides, and implementation examples",
+    },
+  },
+}
