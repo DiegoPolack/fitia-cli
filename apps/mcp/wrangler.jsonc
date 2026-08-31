@@ -9,7 +9,7 @@
   "vars": {
     "ALLOWED_HOSTS": "fitia.cueva.io",
     "ALLOWED_ORIGINS": "https://fitia.cueva.io",
-    "CLERK_ISSUER": "https://your-clerk-instance.clerk.accounts.dev",
+    "CLERK_ISSUER": "https://clerk.fitia.cueva.io",
     "MCP_RESOURCE": "https://fitia.cueva.io/mcp"
   },
   "observability": {

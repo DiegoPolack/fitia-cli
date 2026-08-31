@@ -13,7 +13,7 @@ The remote endpoint is a Cloudflare Worker using Hono, Clerk OAuth, and a Neon P
 
 ## Infrastructure
 
-1. Create a Neon database and apply `apps/mcp/migrations/0001_remote_sessions.sql`.
+1. Create a Neon database, set `DATABASE_URL` in the ignored root `.env`, then run `bun run --filter @fitia/mcp db:migrate`.
 2. Replace the public values in `apps/mcp/wrangler.jsonc`.
 3. Configure Clerk custom scopes `fitia:read` and `fitia:write`. Enable CIMD for supported clients, restrict admission to reviewed clients, and configure appropriate default scopes for clients that omit `scope`.
 4. Set `DATABASE_URL` to the Neon connection string as a Worker secret.

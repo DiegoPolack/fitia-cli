@@ -19,6 +19,8 @@
     "build": "rm -rf dist && bun run build:stdio && bun run build:worker",
     "build:stdio": "bun build src/index.ts src/link.ts --target=bun --outdir=dist --entry-naming='[dir]/[name].js' --sourcemap=external && mv dist/index.js dist/fitia-mcp.js && mv dist/link.js dist/fitia-mcp-link.js && chmod +x dist/fitia-mcp.js dist/fitia-mcp-link.js",
     "build:worker": "wrangler deploy --dry-run --outdir=dist/worker",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "drizzle-kit migrate",
     "dev:worker": "wrangler dev",
     "typecheck": "tsc --noEmit",
     "clean": "rm -rf dist"
@@ -29,9 +31,14 @@
     "@modelcontextprotocol/hono": "2.0.0",
     "@modelcontextprotocol/server": "^2.0.0",
     "@neondatabase/serverless": "^1.1.0",
+    "drizzle-orm": "^0.45.2",
     "effect": "4.0.0-rc.112",
     "hono": "^4.13.5",
     "marked": "^18.0.11",
     "zod": "^4.1.5"
+  },
+  "devDependencies": {
+    "dotenv": "^17.4.2",
+    "drizzle-kit": "^0.31.10"
   }
 }
