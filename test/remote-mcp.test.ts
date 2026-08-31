@@ -46,6 +46,33 @@ test("remote MCP publishes path-aware OAuth metadata", async () => {
   });
 });
 
+test("remote MCP advertises Clerk dynamic client registration", async () => {
+  const response = await createRemoteApp(env).fetch(
+    new Request("https://api.example.test/.well-known/oauth-authorization-server", {
+      headers: { Host: "api.example.test" },
+    }),
+  );
+  expect(response.status).toBe(200);
+  expect(await response.json()).toMatchObject({
+    issuer: "https://clerk.example.test",
+    registration_endpoint: "https://clerk.example.test/oauth/register",
+    grant_types_supported: ["authorization_code", "refresh_token"],
+    token_endpoint_auth_methods_supported: ["client_secret_basic", "none", "client_secret_post"],
+    scopes_supported: [
+      "openid",
+      "profile",
+      "email",
+      "public_metadata",
+      "private_metadata",
+      "offline_access",
+      "fitia:read",
+      "fitia:write",
+    ],
+    code_challenge_methods_supported: ["S256"],
+    authorization_response_iss_parameter_supported: true,
+  });
+});
+
 test("remote MCP challenges missing bearer credentials", async () => {
   const response = await createRemoteApp(env).fetch(
     new Request("https://api.example.test/mcp", {

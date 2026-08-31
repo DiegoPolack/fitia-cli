@@ -15,7 +15,7 @@ The remote endpoint is a Cloudflare Worker using Hono, Clerk OAuth, and a Neon P
 
 1. Create a Neon database, set `DATABASE_URL` in the ignored root `.env`, then run `bun run --filter @fitia/mcp db:migrate`.
 2. Replace the public values in `apps/mcp/wrangler.jsonc`.
-3. Configure Clerk custom scopes `fitia:read` and `fitia:write`. Enable CIMD for supported clients, restrict admission to reviewed clients, and configure appropriate default scopes for clients that omit `scope`.
+3. Configure Clerk custom scopes `fitia:read` and `fitia:write`. Enable CIMD for supported clients and restrict admission to reviewed clients. If dynamic client registration is enabled, set Clerk's default scopes to `openid`, `profile`, `email`, `offline_access`, `fitia:read`, and `fitia:write`; ChatGPT's dynamically registered client otherwise fails authorization with `invalid_scope`.
 4. Set `DATABASE_URL` to the Neon connection string as a Worker secret.
 5. Set `CLERK_JWT_KEY` to the Clerk instance's PEM JWT public key.
 6. Generate 32 random bytes, encode them as base64, and set `FITIA_SESSION_ENCRYPTION_KEY` as a Worker secret.
@@ -40,7 +40,7 @@ The linker refreshes the local session, then sends it in one bounded HTTPS reque
 - `GET /`: minimal project landing page rendered from Markdown.
 - `POST /mcp`: stateless Streamable HTTP MCP endpoint.
 - `GET /.well-known/oauth-protected-resource/mcp`: RFC 9728 protected-resource metadata.
-- `GET /.well-known/oauth-authorization-server`: Clerk authorization-server compatibility metadata.
+- `GET /.well-known/oauth-authorization-server`: Clerk authorization-server compatibility metadata, including dynamic client registration for MCP clients such as ChatGPT.
 - `GET /health`: configuration-free health response.
 - `POST /link/start`: authenticated one-time code creation.
 - `POST /link/complete`: one-time local session submission.
