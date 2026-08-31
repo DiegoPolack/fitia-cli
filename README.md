@@ -1,6 +1,19 @@
-# Fitia
+<p align="center">
+  <img src="docs/readme-hero.svg" alt="Fitia CLI - your Fitia account, from the terminal or an agent" width="100%">
+</p>
 
-An unofficial, production-oriented TypeScript monorepo for accessing your own Fitia account through a CLI or an MCP server. Both adapters share one Effect-based core and the same validated, preview-first write operations.
+<p align="center">
+  An unofficial, production-oriented TypeScript monorepo for accessing your own Fitia account through a CLI or an MCP server.
+</p>
+
+<p align="center">
+  <a href="#install-locally">Install</a> ·
+  <a href="#commands">Commands</a> ·
+  <a href="#mcp-server">MCP server</a> ·
+  <a href="#output-for-agents">Agent output</a>
+</p>
+
+Both adapters share one Effect-based core and the same validated, preview-first write operations.
 
 ## Install locally
 

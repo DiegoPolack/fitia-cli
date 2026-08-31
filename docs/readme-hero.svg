@@ -1,0 +1,80 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="560" viewBox="0 0 1200 560" role="img" aria-labelledby="title description">
+  <title id="title">Fitia CLI</title>
+  <desc id="description">A command line interface and MCP server for your Fitia account.</desc>
+  <defs>
+    <radialGradient id="glow" cx="0" cy="0" r="1" gradientTransform="translate(600 -24) rotate(90) scale(430 680)" gradientUnits="userSpaceOnUse">
+      <stop class="glow-start" stop-color="#292929" stop-opacity="0.9" />
+      <stop class="glow-end" offset="1" stop-color="#111111" stop-opacity="0" />
+    </radialGradient>
+    <filter id="grain" x="0" y="0" width="100%" height="100%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.8" numOctaves="4" stitchTiles="stitch" />
+      <feColorMatrix type="saturate" values="0" />
+    </filter>
+    <clipPath id="canvas">
+      <rect width="1200" height="560" rx="24" />
+    </clipPath>
+    <style>
+      .canvas { fill: #111111; }
+      .glow-start { stop-color: #292929; }
+      .glow-end { stop-color: #111111; }
+      .primary { fill: #f8f7f2; }
+      .secondary { fill: #f8f7f2; fill-opacity: 0.86; }
+      .muted { fill: #f8f7f2; fill-opacity: 0.58; }
+      .faint { fill: #f8f7f2; fill-opacity: 0.42; }
+      .surface { fill: #f8f7f2; fill-opacity: 0.035; stroke: #f8f7f2; stroke-opacity: 0.13; }
+      .divider { stroke: #f8f7f2; stroke-opacity: 0.12; }
+      .noise { opacity: 0.055; mix-blend-mode: soft-light; }
+      .sans { font-family: "Space Grotesk", "Avenir Next", "Segoe UI", sans-serif; }
+      .mono { font-family: "Geist Mono", "SFMono-Regular", Consolas, monospace; }
+      @media (prefers-color-scheme: light) {
+        .canvas { fill: #f4f0e8; }
+        .glow-start { stop-color: #e7a15d; stop-opacity: 0.28; }
+        .glow-end { stop-color: #f4f0e8; }
+        .primary { fill: #17130f; }
+        .secondary { fill: #17130f; fill-opacity: 0.86; }
+        .muted { fill: #17130f; fill-opacity: 0.68; }
+        .faint { fill: #17130f; fill-opacity: 0.5; }
+        .surface { fill: #17130f; fill-opacity: 0.025; stroke: #17130f; stroke-opacity: 0.13; }
+        .divider { stroke: #17130f; stroke-opacity: 0.13; }
+        .noise { opacity: 0.035; mix-blend-mode: multiply; }
+      }
+    </style>
+  </defs>
+
+  <g clip-path="url(#canvas)">
+    <rect class="canvas" width="1200" height="560" />
+    <rect width="1200" height="560" fill="url(#glow)" />
+    <rect class="noise" width="1200" height="560" filter="url(#grain)" />
+
+    <g transform="translate(104 82)">
+      <g transform="translate(0 1)">
+        <rect class="surface" width="78" height="28" rx="6" />
+        <circle class="primary" cx="15" cy="14" r="3" />
+        <text class="muted mono" x="26" y="18" font-size="11" letter-spacing="0.7">v0.7.0</text>
+      </g>
+
+      <text class="primary sans" x="0" y="110" font-size="72" font-weight="500" letter-spacing="-3.2">Fitia CLI</text>
+      <text class="secondary sans" x="2" y="151" font-size="20" letter-spacing="-0.25">Your Fitia account, from the terminal or an agent.</text>
+
+      <g transform="translate(0 209)">
+        <rect class="surface" width="992" height="171" rx="12" />
+        <line class="divider" x1="0" y1="43" x2="992" y2="43" />
+        <circle class="faint" cx="22" cy="21.5" r="3" />
+        <circle class="faint" cx="36" cy="21.5" r="3" />
+        <circle class="faint" cx="50" cy="21.5" r="3" />
+        <text class="faint mono" x="496" y="26" font-size="11" text-anchor="middle">fitia</text>
+
+        <text class="muted mono" x="24" y="78" font-size="14">$</text>
+        <text class="primary mono" x="44" y="78" font-size="14">fitia day summary --date 2026-08-30</text>
+        <text class="muted mono" x="24" y="111" font-size="14">$</text>
+        <text class="primary mono" x="44" y="111" font-size="14">fitia meal suggest --meal dinner</text>
+        <text class="muted mono" x="24" y="144" font-size="14">$</text>
+        <text class="primary mono" x="44" y="144" font-size="14">fitia-mcp</text>
+
+        <text class="faint sans" x="968" y="78" font-size="12" text-anchor="end">daily macros</text>
+        <text class="faint sans" x="968" y="111" font-size="12" text-anchor="end">smart suggestions</text>
+        <text class="faint sans" x="968" y="144" font-size="12" text-anchor="end">agent tools</text>
+      </g>
+    </g>
+  </g>
+</svg>
