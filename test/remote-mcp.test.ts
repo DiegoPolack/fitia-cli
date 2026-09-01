@@ -128,10 +128,15 @@ test("remote boundary rejects unconfigured hosts and origins", async () => {
 });
 
 test("read-only grants discover write tools and receive a scope-upgrade challenge", async () => {
+  let linkStarted = false;
   const server = createServer({
     token: "",
     canWrite: false,
     resourceMetadataUrl: "https://api.example.test/.well-known/oauth-protected-resource/mcp",
+    startLink: async () => {
+      linkStarted = true;
+      return { code: "one-time-code", expiresInSeconds: 600 };
+    },
   });
   const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
   await server.connect(serverTransport);
@@ -153,7 +158,10 @@ test("read-only grants discover write tools and receive a scope-upgrade challeng
   response = receive();
   await clientTransport.send({ jsonrpc: "2.0", id: 2, method: "tools/list", params: {} });
   const tools = (await response).result.tools;
-  expect(tools).toHaveLength(12);
+  expect(tools).toHaveLength(13);
+  expect(tools.find((tool: { name: string }) => tool.name === "fitia-account-link")._meta.securitySchemes).toEqual([
+    { type: "oauth2", scopes: ["fitia:read"] },
+  ]);
   const writeTool = tools.find((tool: { name: string }) => tool.name === "fitia-meal-log");
   expect(writeTool._meta.securitySchemes).toEqual([{ type: "oauth2", scopes: ["fitia:read", "fitia:write"] }]);
 
@@ -181,6 +189,18 @@ test("read-only grants discover write tools and receive a scope-upgrade challeng
   expect(denied._meta["mcp/www_authenticate"]).toEqual([
     'Bearer resource_metadata="https://api.example.test/.well-known/oauth-protected-resource/mcp", scope="fitia:write", error="insufficient_scope", error_description="This tool requires fitia:write"',
   ]);
+
+  response = receive();
+  await clientTransport.send({
+    jsonrpc: "2.0",
+    id: 4,
+    method: "tools/call",
+    params: { name: "fitia-account-link", arguments: {} },
+  });
+  const linked = (await response).result;
+  expect(linkStarted).toBe(true);
+  expect(JSON.parse(linked.content[0].text)).toEqual({ code: "one-time-code", expiresInSeconds: 600 });
+
   await clientTransport.close();
 });
 

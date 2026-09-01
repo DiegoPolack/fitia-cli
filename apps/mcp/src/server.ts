@@ -33,6 +33,7 @@ type ServerOptions = {
   readonly timeoutMs?: number;
   readonly canWrite?: boolean;
   readonly resourceMetadataUrl?: string;
+  readonly startLink?: () => Promise<{ readonly code: string; readonly expiresInSeconds: number }>;
 };
 
 const readSecurity = { securitySchemes: [{ type: "oauth2", scopes: ["fitia:read"] }] };
@@ -81,6 +82,29 @@ export function createServer(options: ServerOptions = {}) {
               }
             : {}),
         });
+
+  if (options.startLink)
+    server.registerTool(
+      "fitia-account-link",
+      {
+        description:
+          "Create a single-use 10-minute code that links this connector identity to an existing local Fitia CLI session.",
+        inputSchema: z.object({}),
+        annotations: { readOnlyHint: true },
+        _meta: readSecurity,
+      },
+      async () => {
+        try {
+          const result = await options.startLink?.();
+          return { content: [{ type: "text" as const, text: JSON.stringify(result) }] };
+        } catch {
+          return {
+            content: [{ type: "text" as const, text: JSON.stringify({ error: "Could not create a link code" }) }],
+            isError: true,
+          };
+        }
+      },
+    );
 
   server.registerTool(
     operations.authStatus.mcpName,

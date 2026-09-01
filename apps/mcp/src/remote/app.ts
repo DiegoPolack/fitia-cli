@@ -305,13 +305,19 @@ export function createRemoteApp(env: RemoteEnv) {
       env.DATABASE_URL,
       await importEncryptionKey(env.FITIA_SESSION_ENCRYPTION_KEY),
     );
-    const session = await repository.load(clerkUserFrom(auth));
+    const clerkUserId = clerkUserFrom(auth);
+    const session = await repository.load(clerkUserId);
     const handler = createMcpHandler(() =>
       createServer({
         token: session?.idToken,
         trustedAccountId: session?.uid,
         canWrite: auth.scopes.includes("fitia:write"),
         resourceMetadataUrl,
+        startLink: async () => {
+          const code = randomCode();
+          await repository.createLinkCode(clerkUserId, code);
+          return { code, expiresInSeconds: 600 };
+        },
       }),
     );
     const parsedBody = (context.var as { parsedBody?: unknown }).parsedBody;

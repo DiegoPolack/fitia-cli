@@ -25,7 +25,7 @@ Use `wrangler secret put DATABASE_URL`, `wrangler secret put CLERK_JWT_KEY`, and
 
 ## Link an account
 
-An authenticated application calls `POST /link/start` with a Clerk OAuth bearer token containing `fitia:read`. The response contains a 256-bit, single-use code valid for ten minutes.
+An authenticated connector calls the `fitia-account-link` tool, or an authenticated application calls `POST /link/start`, with a Clerk OAuth bearer token containing `fitia:read`. The response contains a 256-bit, single-use code valid for ten minutes.
 
 On the Mac holding the Fitia Keychain session, pipe that code to the local linker:
 
