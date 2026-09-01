@@ -250,7 +250,10 @@ test("Firebase ID tokens are verified offline against Google's public key", asyn
   );
   const token = `${header}.${claims}.${Buffer.from(signature).toString("base64url")}`;
   const jwk = { ...(await crypto.subtle.exportKey("jwk", keys.publicKey)), kid: "test-key", alg: "RS256" };
-  const fetcher = (() => Promise.resolve(Response.json({ keys: [jwk] }))) as typeof fetch;
+  const fetcher = ((_input: string | URL | Request, init?: RequestInit) => {
+    expect(init?.redirect).toBe("manual");
+    return Promise.resolve(Response.json({ keys: [jwk] }));
+  }) as typeof fetch;
 
   expect(await verifyFirebaseIdToken(token, fetcher)).toBe("fitia-user");
   const tamperedClaims = encode({

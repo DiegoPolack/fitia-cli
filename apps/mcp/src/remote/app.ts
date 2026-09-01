@@ -300,6 +300,9 @@ export function createRemoteApp(env: RemoteEnv) {
         "Invalid Fitia session",
         "Fitia account verification failed",
         "Fitia account verification request failed",
+        "Firebase signing key fetch failed",
+        "Firebase signing key response rejected",
+        "Firebase signing key response invalid",
         "Fitia profile verification failed",
         "Fitia profile verification request failed",
         "Link code is invalid or expired",
@@ -310,13 +313,19 @@ export function createRemoteApp(env: RemoteEnv) {
           : undefined;
       console.warn("[fitia-link] rejected", { reason: known.has(message) ? message : "unexpected", code });
       const linkError =
-        message === "Fitia account verification request failed"
-          ? "FITIA_ACCOUNT_VERIFICATION_FAILED"
-          : message === "Fitia profile verification request failed"
-            ? "FITIA_PROFILE_VERIFICATION_FAILED"
-            : message === "Link code is invalid or expired"
-              ? "LINK_CODE_INVALID"
-              : "LINK_FAILED";
+        message === "Firebase signing key fetch failed"
+          ? "FIREBASE_KEYS_FETCH_FAILED"
+          : message === "Firebase signing key response rejected"
+            ? "FIREBASE_KEYS_HTTP_FAILED"
+            : message === "Firebase signing key response invalid"
+              ? "FIREBASE_KEYS_PARSE_FAILED"
+              : message === "Fitia account verification request failed"
+                ? "FITIA_ACCOUNT_VERIFICATION_FAILED"
+                : message === "Fitia profile verification request failed"
+                  ? "FITIA_PROFILE_VERIFICATION_FAILED"
+                  : message === "Link code is invalid or expired"
+                    ? "LINK_CODE_INVALID"
+                    : "LINK_FAILED";
       context.header("X-Fitia-Link-Error", linkError);
       return context.json({ error: "The link request is invalid or expired" }, 400);
     }

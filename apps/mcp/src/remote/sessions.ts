@@ -5,7 +5,7 @@ import { base64ToBytes, bytesToBase64, decryptJson, encryptJson, hashCode } from
 const FIREBASE_KEY = "AIzaSyDuydfUsIFGRZttSiB3mEy0yBwAnnAa2yA";
 const FIREBASE_PROJECT = "fitia-27c84";
 const FIREBASE_ISSUER = `https://securetoken.google.com/${FIREBASE_PROJECT}`;
-const FIREBASE_JWKS = "https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com";
+const FIREBASE_JWKS = "https://www.googleapis.com/robot/v1/metadata/jwk/securetoken@system.gserviceaccount.com";
 const FITIA = "https://app.fitia.app";
 const textDecoder = new TextDecoder();
 const textEncoder = new TextEncoder();
@@ -116,19 +116,16 @@ export async function verifyFirebaseIdToken(idToken: string, fetcher: typeof fet
 
   let response: Response;
   try {
-    response = await fetcher(FIREBASE_JWKS, {
-      redirect: "error",
-      signal: AbortSignal.timeout(15_000),
-    });
+    response = await fetcher(FIREBASE_JWKS, { redirect: "manual" });
   } catch {
-    throw new Error("Fitia account verification request failed");
+    throw new Error("Firebase signing key fetch failed");
   }
   if (!response.ok) {
     await response.body?.cancel();
-    throw new Error("Fitia account verification request failed");
+    throw new Error("Firebase signing key response rejected");
   }
   const result = await boundedJson(response).catch(() => {
-    throw new Error("Fitia account verification request failed");
+    throw new Error("Firebase signing key response invalid");
   });
   if (!Array.isArray(result.keys)) throw new Error("Fitia account verification failed");
   const jwk = result.keys.find(
@@ -183,7 +180,7 @@ async function verifyProfile(idToken: string, uid: string): Promise<void> {
   try {
     response = await fetch(`${FITIA}/api/profiles/${encodeURIComponent(uid)}`, {
       headers: { Authorization: idToken, Accept: "application/json" },
-      redirect: "error",
+      redirect: "manual",
       signal: AbortSignal.timeout(15_000),
     });
   } catch {
