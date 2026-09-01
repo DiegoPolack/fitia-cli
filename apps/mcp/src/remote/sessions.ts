@@ -1,8 +1,14 @@
-import { cleanToken, FitiaClient, requireToken, tokenStatus } from "@fitia/core/runtime";
+import { cleanToken, requireToken, tokenStatus } from "@fitia/core/runtime";
 import { neon } from "@neondatabase/serverless";
 import { base64ToBytes, bytesToBase64, decryptJson, encryptJson, hashCode } from "./crypto.ts";
 
 const FIREBASE_KEY = "AIzaSyDuydfUsIFGRZttSiB3mEy0yBwAnnAa2yA";
+const FIREBASE_PROJECT = "fitia-27c84";
+const FIREBASE_ISSUER = `https://securetoken.google.com/${FIREBASE_PROJECT}`;
+const FIREBASE_JWKS = "https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com";
+const FITIA = "https://app.fitia.app";
+const textDecoder = new TextDecoder();
+const textEncoder = new TextEncoder();
 
 export interface FitiaSession {
   readonly idToken: string;
@@ -93,6 +99,106 @@ function validateSession(value: FitiaSession, allowExpired = false): FitiaSessio
   return { ...value, idToken };
 }
 
+export async function verifyFirebaseIdToken(idToken: string, fetcher: typeof fetch = fetch): Promise<string> {
+  const segments = idToken.split(".");
+  if (segments.length !== 3 || segments.some((segment) => segment.length === 0 || segment.length > 16_384))
+    throw new Error("Fitia account verification failed");
+  let header: Record<string, unknown>;
+  let claims: Record<string, unknown>;
+  try {
+    header = JSON.parse(textDecoder.decode(base64ToBytes(segments[0] as string)));
+    claims = JSON.parse(textDecoder.decode(base64ToBytes(segments[1] as string)));
+  } catch {
+    throw new Error("Fitia account verification failed");
+  }
+  if (header.alg !== "RS256" || typeof header.kid !== "string" || header.kid.length === 0)
+    throw new Error("Fitia account verification failed");
+
+  let response: Response;
+  try {
+    response = await fetcher(FIREBASE_JWKS, {
+      redirect: "error",
+      signal: AbortSignal.timeout(15_000),
+    });
+  } catch {
+    throw new Error("Fitia account verification request failed");
+  }
+  if (!response.ok) {
+    await response.body?.cancel();
+    throw new Error("Fitia account verification request failed");
+  }
+  const result = await boundedJson(response).catch(() => {
+    throw new Error("Fitia account verification request failed");
+  });
+  if (!Array.isArray(result.keys)) throw new Error("Fitia account verification failed");
+  const jwk = result.keys.find(
+    (value) =>
+      typeof value === "object" &&
+      value !== null &&
+      "kid" in value &&
+      value.kid === header.kid &&
+      "alg" in value &&
+      value.alg === "RS256" &&
+      "kty" in value &&
+      value.kty === "RSA",
+  );
+  if (!jwk) throw new Error("Fitia account verification failed");
+  let key: CryptoKey;
+  try {
+    key = await crypto.subtle.importKey(
+      "jwk",
+      jwk as JsonWebKey,
+      { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" },
+      false,
+      ["verify"],
+    );
+  } catch {
+    throw new Error("Fitia account verification failed");
+  }
+  const verified = await crypto.subtle.verify(
+    "RSASSA-PKCS1-v1_5",
+    key,
+    Uint8Array.from(base64ToBytes(segments[2] as string)).buffer,
+    textEncoder.encode(`${segments[0]}.${segments[1]}`),
+  );
+  const now = Math.floor(Date.now() / 1_000);
+  if (
+    !verified ||
+    claims.iss !== FIREBASE_ISSUER ||
+    claims.aud !== FIREBASE_PROJECT ||
+    typeof claims.sub !== "string" ||
+    claims.sub.length === 0 ||
+    claims.sub.length > 128 ||
+    !Number.isSafeInteger(claims.exp) ||
+    (claims.exp as number) <= now ||
+    !Number.isSafeInteger(claims.iat) ||
+    (claims.iat as number) > now + 300
+  )
+    throw new Error("Fitia account verification failed");
+  return claims.sub;
+}
+
+async function verifyProfile(idToken: string, uid: string): Promise<void> {
+  let response: Response;
+  try {
+    response = await fetch(`${FITIA}/api/profiles/${encodeURIComponent(uid)}`, {
+      headers: { Authorization: idToken, Accept: "application/json" },
+      redirect: "error",
+      signal: AbortSignal.timeout(15_000),
+    });
+  } catch {
+    throw new Error("Fitia profile verification request failed");
+  }
+  if (!response.ok) {
+    await response.body?.cancel();
+    throw new Error("Fitia profile verification request failed");
+  }
+  const profile = await boundedJson(response).catch(() => {
+    throw new Error("Fitia profile verification request failed");
+  });
+  if (Object.keys(profile).length === 0) throw new Error("Fitia profile verification failed");
+}
+
 async function refresh(session: FitiaSession): Promise<FitiaSession> {
   const response = await fetch(`https://securetoken.googleapis.com/v1/token?key=${FIREBASE_KEY}`, {
     method: "POST",
@@ -113,8 +219,7 @@ async function refresh(session: FitiaSession): Promise<FitiaSession> {
     uid: result.user_id,
   } as FitiaSession);
   if (next.uid !== session.uid) throw new Error("Fitia account changed during refresh");
-  const account = await new FitiaClient(next.idToken, 15_000).account();
-  if (account.id !== session.uid) throw new Error("Fitia account verification failed");
+  if ((await verifyFirebaseIdToken(next.idToken)) !== session.uid) throw new Error("Fitia account verification failed");
   return next;
 }
 
@@ -159,10 +264,9 @@ export class SessionRepository {
   async consumeLinkCode(code: string, input: FitiaSession): Promise<void> {
     const digest = await hashCode(code);
     const session = validateSession(input);
-    const client = new FitiaClient(session.idToken, 15_000);
-    const account = await client.account();
-    await client.profile();
-    if (account.id !== session.uid) throw new Error("Fitia account verification failed");
+    const accountId = await verifyFirebaseIdToken(session.idToken);
+    await verifyProfile(session.idToken, accountId);
+    if (accountId !== session.uid) throw new Error("Fitia account verification failed");
     const resolved = await this.run((database) =>
       database.query<{ clerk_user_id: string }>(
         "SELECT clerk_user_id FROM fitia_link_codes WHERE code_hash = decode($1, 'base64') AND expires_at > now()",
@@ -171,7 +275,7 @@ export class SessionRepository {
     );
     const clerkUserId = resolved.rows[0]?.clerk_user_id;
     if (!clerkUserId) throw new Error("Link code is invalid or expired");
-    const bound = await encryptJson(this.encryptionKey, session, `${clerkUserId}:${account.id}`);
+    const bound = await encryptJson(this.encryptionKey, session, `${clerkUserId}:${accountId}`);
     const consumed = await this.run((database) =>
       database.query<{ clerk_user_id: string }>(
         `WITH consumed AS (
@@ -188,7 +292,7 @@ export class SessionRepository {
         [
           bytesToBase64(digest),
           clerkUserId,
-          account.id,
+          accountId,
           bytesToBase64(bound.ciphertext),
           bytesToBase64(bound.iv),
           expiry(session.idToken),

@@ -35,7 +35,12 @@ async function main() {
     signal: AbortSignal.timeout(15_000),
   });
   await response.body?.cancel();
-  if (!response.ok) throw new Error("The remote server rejected the link request");
+  if (!response.ok) {
+    const code = response.headers.get("x-fitia-link-error");
+    throw new Error(
+      code ? `The remote server rejected the link request (${code})` : "The remote server rejected the link request",
+    );
+  }
   process.stdout.write(`${JSON.stringify({ ok: true, linked: true })}\n`);
 }
 

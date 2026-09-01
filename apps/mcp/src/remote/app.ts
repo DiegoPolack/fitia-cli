@@ -293,7 +293,31 @@ export function createRemoteApp(env: RemoteEnv) {
       );
       await repository.consumeLinkCode(body.code, body.session as FitiaSession);
       return context.json({ linked: true });
-    } catch {
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "unknown";
+      const known = new Set([
+        "Invalid Fitia ID token",
+        "Invalid Fitia session",
+        "Fitia account verification failed",
+        "Fitia account verification request failed",
+        "Fitia profile verification failed",
+        "Fitia profile verification request failed",
+        "Link code is invalid or expired",
+      ]);
+      const code =
+        typeof error === "object" && error !== null && "code" in error && typeof error.code === "string"
+          ? error.code
+          : undefined;
+      console.warn("[fitia-link] rejected", { reason: known.has(message) ? message : "unexpected", code });
+      const linkError =
+        message === "Fitia account verification request failed"
+          ? "FITIA_ACCOUNT_VERIFICATION_FAILED"
+          : message === "Fitia profile verification request failed"
+            ? "FITIA_PROFILE_VERIFICATION_FAILED"
+            : message === "Link code is invalid or expired"
+              ? "LINK_CODE_INVALID"
+              : "LINK_FAILED";
+      context.header("X-Fitia-Link-Error", linkError);
       return context.json({ error: "The link request is invalid or expired" }, 400);
     }
   });

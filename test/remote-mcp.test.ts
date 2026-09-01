@@ -9,7 +9,12 @@ import {
   encryptJson,
   importEncryptionKey,
 } from "../apps/mcp/src/remote/crypto.ts";
-import { type DatabaseRunner, type FitiaSession, SessionRepository } from "../apps/mcp/src/remote/sessions.ts";
+import {
+  type DatabaseRunner,
+  type FitiaSession,
+  SessionRepository,
+  verifyFirebaseIdToken,
+} from "../apps/mcp/src/remote/sessions.ts";
 import { createServer } from "../apps/mcp/src/server.ts";
 
 const env = {
@@ -222,6 +227,43 @@ function idToken(exp: number, marker: string): string {
   const encode = (value: unknown) => Buffer.from(JSON.stringify(value)).toString("base64url");
   return `${encode({ alg: "RS256", typ: "JWT" })}.${encode({ exp, marker })}.c2lnbmF0dXJl`;
 }
+
+test("Firebase ID tokens are verified offline against Google's public key", async () => {
+  const keys = await crypto.subtle.generateKey(
+    { name: "RSASSA-PKCS1-v1_5", modulusLength: 2048, publicExponent: new Uint8Array([1, 0, 1]), hash: "SHA-256" },
+    true,
+    ["sign", "verify"],
+  );
+  const encode = (value: unknown) => Buffer.from(JSON.stringify(value)).toString("base64url");
+  const header = encode({ alg: "RS256", kid: "test-key" });
+  const claims = encode({
+    iss: "https://securetoken.google.com/fitia-27c84",
+    aud: "fitia-27c84",
+    sub: "fitia-user",
+    iat: Math.floor(Date.now() / 1_000),
+    exp: Math.floor(Date.now() / 1_000) + 3600,
+  });
+  const signature = await crypto.subtle.sign(
+    "RSASSA-PKCS1-v1_5",
+    keys.privateKey,
+    new TextEncoder().encode(`${header}.${claims}`),
+  );
+  const token = `${header}.${claims}.${Buffer.from(signature).toString("base64url")}`;
+  const jwk = { ...(await crypto.subtle.exportKey("jwk", keys.publicKey)), kid: "test-key", alg: "RS256" };
+  const fetcher = (() => Promise.resolve(Response.json({ keys: [jwk] }))) as typeof fetch;
+
+  expect(await verifyFirebaseIdToken(token, fetcher)).toBe("fitia-user");
+  const tamperedClaims = encode({
+    iss: "https://securetoken.google.com/fitia-27c84",
+    aud: "fitia-27c84",
+    sub: "other-user",
+    iat: Math.floor(Date.now() / 1_000),
+    exp: Math.floor(Date.now() / 1_000) + 3600,
+  });
+  await expect(verifyFirebaseIdToken(`${header}.${tamperedClaims}.${token.split(".")[2]}`, fetcher)).rejects.toThrow(
+    "Fitia account verification failed",
+  );
+});
 
 test("concurrent Fitia refreshes cannot overwrite the winning credential", async () => {
   const key = await importEncryptionKey("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=");
