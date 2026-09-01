@@ -170,6 +170,20 @@ test("read-only grants discover write tools and receive a scope-upgrade challeng
     jsonrpc: "2.0",
     id: 3,
     method: "tools/call",
+    params: { name: "fitia-auth-status", arguments: {} },
+  });
+  const staleClientLink = (await response).result;
+  expect(staleClientLink.isError).toBe(true);
+  expect(JSON.parse(staleClientLink.content[0].text)).toMatchObject({
+    error: { code: "FITIA_LINK_REQUIRED" },
+    link: { code: "one-time-code", expiresInSeconds: 600 },
+  });
+
+  response = receive();
+  await clientTransport.send({
+    jsonrpc: "2.0",
+    id: 4,
+    method: "tools/call",
     params: {
       name: "fitia-meal-log",
       arguments: {
@@ -193,7 +207,7 @@ test("read-only grants discover write tools and receive a scope-upgrade challeng
   response = receive();
   await clientTransport.send({
     jsonrpc: "2.0",
-    id: 4,
+    id: 5,
     method: "tools/call",
     params: { name: "fitia-account-link", arguments: {} },
   });

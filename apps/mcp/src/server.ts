@@ -65,7 +65,35 @@ export function createServer(options: ServerOptions = {}) {
   const layer = makeFitiaTokenLayer(options);
   const canWrite = options.canWrite !== false;
   const server = new McpServer({ name: "fitia", version: VERSION });
-  const read = <A>(operation: (service: typeof Fitia.Service) => Effect.Effect<A, CliError>) => call(layer, operation);
+  const startLink = options.startLink;
+  const linkRequired = async () => {
+    try {
+      const link = await startLink?.();
+      return {
+        content: [
+          {
+            type: "text" as const,
+            text: JSON.stringify({
+              error: {
+                code: "FITIA_LINK_REQUIRED",
+                message: "This connector identity is not linked to a Fitia account.",
+                hint: "Use the single-use code within ten minutes on a device with an authenticated Fitia CLI session.",
+              },
+              link,
+            }),
+          },
+        ],
+        isError: true,
+      };
+    } catch {
+      return {
+        content: [{ type: "text" as const, text: JSON.stringify({ error: "Could not create a link code" }) }],
+        isError: true,
+      };
+    }
+  };
+  const read = <A>(operation: (service: typeof Fitia.Service) => Effect.Effect<A, CliError>) =>
+    !options.token && startLink ? linkRequired() : call(layer, operation);
   const write = <A>(operation: (service: typeof Fitia.Service) => Effect.Effect<A, CliError>) =>
     canWrite
       ? call(layer, operation)
@@ -83,7 +111,7 @@ export function createServer(options: ServerOptions = {}) {
             : {}),
         });
 
-  if (options.startLink)
+  if (startLink)
     server.registerTool(
       "fitia-account-link",
       {
@@ -95,7 +123,7 @@ export function createServer(options: ServerOptions = {}) {
       },
       async () => {
         try {
-          const result = await options.startLink?.();
+          const result = await startLink();
           return { content: [{ type: "text" as const, text: JSON.stringify(result) }] };
         } catch {
           return {
