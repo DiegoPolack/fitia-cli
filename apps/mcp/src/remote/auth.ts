@@ -21,6 +21,7 @@ export function clerkTokenVerifier(options: {
         const claims = await (options.verify ?? verifyToken)(token, {
           audience: options.audience,
           clockSkewInMs: 5_000,
+          headerType: "at+jwt",
           jwtKey: options.jwtKey,
         });
         if (

@@ -1,6 +1,7 @@
 import { expect, test } from "bun:test";
 import { InMemoryTransport } from "../apps/mcp/node_modules/@modelcontextprotocol/server";
 import { createRemoteApp, type RemoteEnv } from "../apps/mcp/src/remote/app.ts";
+import { clerkTokenVerifier } from "../apps/mcp/src/remote/auth.ts";
 import {
   base64ToBytes,
   bytesToBase64,
@@ -20,6 +21,29 @@ const env = {
   FITIA_SESSION_ENCRYPTION_KEY: "unused-by-public-routes",
   MCP_RESOURCE: "https://api.example.test/mcp",
 } as RemoteEnv;
+
+test("remote auth accepts Clerk OAuth access-token JWTs", async () => {
+  let headerType: unknown;
+  const verifier = clerkTokenVerifier({
+    issuer: "https://clerk.example.test",
+    audience: "https://api.example.test/mcp",
+    jwtKey: "public-key",
+    verify: (async (_token: string, options: { headerType?: string | string[] }) => {
+      headerType = options.headerType;
+      return {
+        iss: "https://clerk.example.test",
+        sub: "user_example",
+        exp: Math.floor(Date.now() / 1_000) + 60,
+        client_id: "oauth-client",
+        scope: "fitia:read offline_access",
+      };
+    }) as never,
+  });
+
+  const auth = await verifier.verifyAccessToken("oauth-access-token");
+  expect(headerType).toBe("at+jwt");
+  expect(auth.scopes).toEqual(["fitia:read", "offline_access"]);
+});
 
 test("remote root renders the Markdown landing page", async () => {
   const response = await createRemoteApp(env).fetch(
