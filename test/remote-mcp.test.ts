@@ -85,6 +85,7 @@ test("remote MCP challenges missing bearer credentials", async () => {
   expect(response.headers.get("www-authenticate")).toContain(
     'resource_metadata="https://api.example.test/.well-known/oauth-protected-resource/mcp"',
   );
+  expect(response.headers.get("www-authenticate")).toContain('scope="fitia:read fitia:write"');
   expect(response.headers.get("cache-control")).toBe("no-store");
 });
 

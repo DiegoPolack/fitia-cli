@@ -120,9 +120,15 @@ export function createRemoteApp(env: RemoteEnv) {
     resourceName: "Fitia MCP",
   };
   const resourceMetadataUrl = getOAuthProtectedResourceMetadataUrl(resource);
+  const verifier = clerkTokenVerifier({ issuer, audience: resource.href, jwtKey: env.CLERK_JWT_KEY });
   const gate = requireBearerAuth({
-    verifier: clerkTokenVerifier({ issuer, audience: resource.href, jwtKey: env.CLERK_JWT_KEY }),
+    verifier,
     requiredScopes: ["fitia:read"],
+    resourceMetadataUrl,
+  });
+  const initialMcpGate = requireBearerAuth({
+    verifier,
+    requiredScopes: ["fitia:read", "fitia:write"],
     resourceMetadataUrl,
   });
   const app = createMcpHonoApp({
@@ -178,7 +184,7 @@ export function createRemoteApp(env: RemoteEnv) {
   });
 
   app.all("/mcp", async (context) => {
-    const auth = await gate(context.req.raw);
+    const auth = await (context.req.raw.headers.has("authorization") ? gate : initialMcpGate)(context.req.raw);
     if (auth instanceof Response) return auth;
     const repository = new SessionRepository(
       env.DATABASE_URL,
