@@ -53,25 +53,145 @@ function renderLanding(): string {
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="description" content="An unofficial CLI and MCP server for your own Fitia account.">
     <title>Fitia CLI</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300..700&display=swap" rel="stylesheet">
     <style>
-      :root { color-scheme: light dark; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
-      body { margin: 0; background: #f4f0e8; color: #191919; }
-      main { width: min(42rem, calc(100% - 2rem)); margin: 0 auto; padding: 12vh 0 5rem; }
-      h1 { font-size: clamp(2.5rem, 10vw, 5.5rem); letter-spacing: -0.08em; margin: 0 0 2rem; }
-      h2 { margin-top: 3rem; font-size: 1rem; text-transform: uppercase; letter-spacing: 0.12em; }
-      p, li { line-height: 1.75; }
-      a { color: inherit; text-decoration-thickness: 2px; text-underline-offset: 0.2em; }
-      code { background: #e4ded2; padding: 0.15em 0.35em; border-radius: 0.2em; }
-      pre { overflow-x: auto; padding: 1rem; background: #191919; color: #f4f0e8; border-radius: 0.35rem; }
-      pre code { padding: 0; background: transparent; }
+      :root {
+        color-scheme: dark light;
+        --background: #111111;
+        --text-primary: #f8f7f2;
+        --text-secondary: rgba(248, 247, 242, 0.86);
+        --text-muted: rgba(248, 247, 242, 0.66);
+        --text-faint: rgba(248, 247, 242, 0.5);
+        --surface: rgba(248, 247, 242, 0.06);
+        --border: rgba(248, 247, 242, 0.12);
+        --link-decoration: rgba(248, 247, 242, 0.3);
+        --page-glow: transparent;
+        --grain-opacity: 0.2;
+        font-family: "Space Grotesk", sans-serif;
+        font-synthesis: none;
+      }
+      * { box-sizing: border-box; }
+      html { min-height: 100%; background: var(--background); }
+      body {
+        min-height: 100vh;
+        margin: 0;
+        overflow-x: hidden;
+        background:
+          radial-gradient(circle at 50% -24%, var(--page-glow), transparent 48%),
+          var(--background);
+        color: var(--text-secondary);
+        -webkit-font-smoothing: antialiased;
+      }
+      .grain {
+        position: fixed;
+        inset: 0;
+        z-index: 0;
+        width: 100%;
+        height: 100%;
+        pointer-events: none;
+        opacity: var(--grain-opacity);
+        mix-blend-mode: soft-light;
+      }
+      main {
+        position: relative;
+        z-index: 1;
+        width: min(44rem, calc(100% - 2.5rem));
+        margin: 0 auto;
+        padding: clamp(5rem, 12vh, 8rem) 0 5rem;
+      }
+      h1 {
+        margin: 0 0 1.25rem;
+        color: var(--text-primary);
+        font-size: clamp(3.75rem, 11vw, 6rem);
+        font-weight: 500;
+        letter-spacing: -0.075em;
+        line-height: 0.95;
+      }
+      h1 + p {
+        max-width: 35rem;
+        margin-bottom: 4.5rem;
+        color: var(--text-muted);
+        font-size: clamp(1rem, 2.6vw, 1.125rem);
+        line-height: 1.7;
+      }
+      h2 {
+        margin: 3.25rem 0 1rem;
+        color: var(--text-faint);
+        font-size: 0.75rem;
+        font-weight: 500;
+        letter-spacing: 0.08em;
+        line-height: 1.5;
+        text-transform: uppercase;
+      }
+      p, li { font-size: 0.9375rem; line-height: 1.8; }
+      a {
+        border-radius: 0.25rem;
+        color: var(--text-primary);
+        text-decoration-color: var(--link-decoration);
+        text-underline-offset: 0.25em;
+        transition: color 160ms ease, text-decoration-color 160ms ease;
+      }
+      a:hover { text-decoration-color: currentColor; }
+      a:focus-visible { outline: 2px solid var(--text-muted); outline-offset: 3px; }
+      code {
+        border: 1px solid var(--border);
+        border-radius: 0.25rem;
+        background: var(--surface);
+        padding: 0.15em 0.35em;
+        color: var(--text-primary);
+        font-family: "SFMono-Regular", Consolas, monospace;
+        font-size: 0.85em;
+      }
+      pre {
+        overflow-x: auto;
+        margin: 1.5rem 0;
+        border: 1px solid var(--border);
+        border-radius: 0.5rem;
+        background: var(--surface);
+        padding: 1.125rem 1.25rem;
+        color: var(--text-secondary);
+      }
+      pre code { border: 0; background: transparent; padding: 0; color: inherit; line-height: 1.65; }
+      main > p:last-child { margin-top: 3rem; color: var(--text-faint); font-size: 0.75rem; }
       @media (prefers-color-scheme: dark) {
-        body { background: #191919; color: #eee9df; }
-        code { background: #302f2c; }
-        pre { background: #eee9df; color: #191919; }
+        :root { --page-glow: rgba(248, 247, 242, 0.025); }
+      }
+      @media (prefers-color-scheme: light) {
+        :root {
+          --background: #f4f0e8;
+          --text-primary: #17130f;
+          --text-secondary: rgba(23, 19, 15, 0.86);
+          --text-muted: rgba(23, 19, 15, 0.68);
+          --text-faint: rgba(23, 19, 15, 0.58);
+          --surface: rgba(23, 19, 15, 0.045);
+          --border: rgba(23, 19, 15, 0.13);
+          --link-decoration: rgba(23, 19, 15, 0.36);
+          --page-glow: rgba(231, 161, 93, 0.24);
+          --grain-opacity: 0.055;
+        }
+        .grain { mix-blend-mode: multiply; }
+      }
+      @media (max-width: 47.99rem) {
+        .grain { display: none; }
+        h1 + p { margin-bottom: 3.5rem; }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        a { transition: none; }
       }
     </style>
   </head>
-  <body><main>${marked.parse(landing)}</main></body>
+  <body>
+    <svg class="grain" aria-hidden="true" focusable="false">
+      <filter id="noise">
+        <feTurbulence type="fractalNoise" baseFrequency="0.8" numOctaves="4" stitchTiles="stitch" />
+        <feColorMatrix type="saturate" values="0" />
+      </filter>
+      <rect width="100%" height="100%" filter="url(#noise)" />
+    </svg>
+    <main>${marked.parse(landing)}</main>
+  </body>
 </html>`;
 }
 
@@ -126,11 +246,6 @@ export function createRemoteApp(env: RemoteEnv) {
     requiredScopes: ["fitia:read"],
     resourceMetadataUrl,
   });
-  const initialMcpGate = requireBearerAuth({
-    verifier,
-    requiredScopes: ["fitia:read", "fitia:write"],
-    resourceMetadataUrl,
-  });
   const app = createMcpHonoApp({
     host: "0.0.0.0",
     allowedHosts: list(env.ALLOWED_HOSTS).map((host) => new URL(`https://${host}`).hostname),
@@ -147,7 +262,7 @@ export function createRemoteApp(env: RemoteEnv) {
   app.get("/", (context) => {
     context.header(
       "Content-Security-Policy",
-      "default-src 'none'; style-src 'unsafe-inline'; base-uri 'none'; frame-ancestors 'none'",
+      "default-src 'none'; style-src 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; base-uri 'none'; frame-ancestors 'none'",
     );
     context.header("Referrer-Policy", "no-referrer");
     context.header("X-Content-Type-Options", "nosniff");
@@ -184,7 +299,7 @@ export function createRemoteApp(env: RemoteEnv) {
   });
 
   app.all("/mcp", async (context) => {
-    const auth = await (context.req.raw.headers.has("authorization") ? gate : initialMcpGate)(context.req.raw);
+    const auth = await gate(context.req.raw);
     if (auth instanceof Response) return auth;
     const repository = new SessionRepository(
       env.DATABASE_URL,

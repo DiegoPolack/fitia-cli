@@ -27,8 +27,13 @@ test("remote root renders the Markdown landing page", async () => {
   );
   expect(response.status).toBe(200);
   expect(response.headers.get("content-type")).toContain("text/html");
-  expect(response.headers.get("content-security-policy")).toContain("frame-ancestors 'none'");
-  expect(await response.text()).toContain("<h1>Fitia CLI</h1>");
+  const policy = response.headers.get("content-security-policy");
+  expect(policy).toContain("frame-ancestors 'none'");
+  expect(policy).toContain("font-src https://fonts.gstatic.com");
+  const html = await response.text();
+  expect(html).toContain("<h1>Fitia CLI</h1>");
+  expect(html).toContain('font-family: "Space Grotesk", sans-serif');
+  expect(html).toContain('<svg class="grain"');
 });
 
 test("remote MCP publishes path-aware OAuth metadata", async () => {
@@ -85,7 +90,7 @@ test("remote MCP challenges missing bearer credentials", async () => {
   expect(response.headers.get("www-authenticate")).toContain(
     'resource_metadata="https://api.example.test/.well-known/oauth-protected-resource/mcp"',
   );
-  expect(response.headers.get("www-authenticate")).toContain('scope="fitia:read fitia:write"');
+  expect(response.headers.get("www-authenticate")).toContain('scope="fitia:read"');
   expect(response.headers.get("cache-control")).toBe("no-store");
 });
 
