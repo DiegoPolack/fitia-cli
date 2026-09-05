@@ -1,6 +1,10 @@
 #!/usr/bin/env bun
 import { credentials, FitiaClient, sessionCredentials } from "@fitia/core";
 
+// Only locally authored messages may reach the terminal. Provider errors and
+// response headers are untrusted and can contain reflected credentials.
+class LinkError extends Error {}
+
 async function readCode(): Promise<string> {
   const interactive = Boolean(process.stdin.isTTY);
   if (interactive) {
@@ -22,12 +26,12 @@ async function readCode(): Promise<string> {
     };
     const fail = () => {
       cleanup();
-      reject(new Error("Link code input failed or timed out"));
+      reject(new LinkError("Link code input failed or timed out"));
     };
     const finish = () => {
       cleanup();
       const code = input.trim();
-      if (!/^[A-Za-z0-9_-]{43}$/.test(code)) reject(new Error("Invalid one-time link code"));
+      if (!/^[A-Za-z0-9_-]{43}$/.test(code)) reject(new LinkError("Invalid one-time link code"));
       else resolve(code);
     };
     const onData = (chunk: Buffer) => {
@@ -45,20 +49,20 @@ async function readCode(): Promise<string> {
 
 async function main() {
   const base = process.argv[2] ?? process.env.FITIA_MCP_URL;
-  if (!base) throw new Error("Pass the remote MCP HTTPS URL or set FITIA_MCP_URL");
+  if (!base) throw new LinkError("Pass the remote MCP HTTPS URL or set FITIA_MCP_URL");
   const parsed = new URL(base);
   if (parsed.username || parsed.password || parsed.search || parsed.hash || parsed.pathname !== "/mcp")
-    throw new Error("Use the exact HTTPS /mcp URL without credentials, query, or fragment");
+    throw new LinkError("Use the exact HTTPS /mcp URL without credentials, query, or fragment");
   const endpoint = new URL("/link/complete", parsed);
-  if (endpoint.protocol !== "https:") throw new Error("Remote linking requires HTTPS");
+  if (endpoint.protocol !== "https:") throw new LinkError("Remote linking requires HTTPS");
   const code = await readCode();
   const current = await sessionCredentials(credentials, true);
   const saved = await credentials.read();
   if (!current || !saved || saved.uid !== current.uid || saved.idToken !== current.token) {
-    throw new Error("No verified Fitia renewable session is available");
+    throw new LinkError("No verified Fitia renewable session is available");
   }
   const account = await new FitiaClient(current.token).account();
-  if (account.id !== saved.uid) throw new Error("Local Fitia account verification failed");
+  if (account.id !== saved.uid) throw new LinkError("Local Fitia account verification failed");
   const response = await fetch(endpoint, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -68,17 +72,14 @@ async function main() {
   });
   await response.body?.cancel();
   if (!response.ok) {
-    const code = response.headers.get("x-fitia-link-error");
-    throw new Error(
-      code ? `The remote server rejected the link request (${code})` : "The remote server rejected the link request",
-    );
+    throw new LinkError("The remote server rejected the link request. Request a new code and verify the local login.");
   }
   process.stdout.write(`${JSON.stringify({ ok: true, linked: true })}\n`);
 }
 
 main().catch((error) => {
   const message =
-    error instanceof Error && !/https?:|token|refresh/i.test(error.message)
+    error instanceof LinkError
       ? error.message
       : "Linking failed. Verify the endpoint and local login, then request a new link code.";
   process.stderr.write(`${JSON.stringify({ ok: false, error: { message } })}\n`);
