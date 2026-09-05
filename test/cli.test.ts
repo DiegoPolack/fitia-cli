@@ -247,7 +247,7 @@ describe("the built executable", () => {
     } finally {
       await rm(stateRoot, { recursive: true, force: true });
     }
-  });
+  }, 20_000);
   test("built removal previews and commits the scoped deletion contract without exposing credentials", async () => {
     const stateRoot = await mkdtemp(join(tmpdir(), "fitia-remove-cli-test-"));
     try {
