@@ -12,9 +12,9 @@
     }
   ],
   "vars": {
-    "ALLOWED_HOSTS": "fitia-mcp.diegopolackl.workers.dev",
-    "ALLOWED_ORIGINS": "https://fitia-mcp.diegopolackl.workers.dev,https://chatgpt.com",
-    "CLERK_ISSUER": "",
+    "ALLOWED_HOSTS": "fitia-mcp.diegopolackl.workers.dev,fitia.polacklabs.com",
+    "ALLOWED_ORIGINS": "https://fitia-mcp.diegopolackl.workers.dev,https://fitia.polacklabs.com,https://chatgpt.com",
+    "CLERK_ISSUER": "https://clerk.fitia.polacklabs.com",
     "MCP_RESOURCE": "https://fitia-mcp.diegopolackl.workers.dev/mcp",
     "ALLOWED_CLERK_USERS": "",
     "FITIA_DISABLE_WRITES": "1"
@@ -23,5 +23,6 @@
     "enabled": false
   },
   "workers_dev": true,
+  "routes": [{ "pattern": "fitia.polacklabs.com", "custom_domain": true }],
   "account_id": "fa095e286d4b7effdb319c7cb45a8ba5"
 }

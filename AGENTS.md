@@ -40,9 +40,12 @@ The core coordinator accepts a WriteJournal: local private files or remote durab
 PostgreSQL locks plus encrypted audit records. No Worker filesystem audit fallback.
 
 Deployment: https://fitia-mcp.diegopolackl.workers.dev/mcp. Worker exists and has
-an encryption-key secret, but Clerk/Neon authorization is pending. Bootstrap is
-inert (discovery 503, unauthenticated MCP 401). ALLOWED_CLERK_USERS is intentionally
-empty; FITIA_DISABLE_WRITES=1. Do not enable until owner identity is configured.
+all three required Worker secrets. Neon migrations are applied. Production Clerk
+issuer is https://clerk.fitia.polacklabs.com; OAuth discovery is live with DCR and
+read/write scopes. Custom alias: https://fitia.polacklabs.com. Local Windows Google
+login and Fitia reads passed. Production owner signup, linking and ChatGPT consent
+remain pending. ALLOWED_CLERK_USERS is intentionally empty; FITIA_DISABLE_WRITES=1.
+Do not enable access until the production owner identity is configured.
 See docs/private-deployment.md for setup, known limitations and readiness gates.
 Never regenerate the encryption key on redeploy: existing data would be unreadable.
 

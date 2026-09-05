@@ -6,12 +6,33 @@ Endpoint: **https://fitia-mcp.diegopolackl.workers.dev/mcp**.
 
 ## Current status
 
-The Cloudflare Worker is deployed. Its AES-256-GCM encryption key is a Worker
-secret. Clerk and Neon are not configured yet: their dashboards require owner
-sign-in. The Worker deliberately reports `ready:false`, rejects unauthenticated
-MCP requests with 401, and returns 503 for discovery until setup is complete.
-It is not yet a working ChatGPT connector. The owner has not completed local
-Fitia Google login or account linking. No real Fitia diary mutations were made.
+The Cloudflare Worker is deployed with all three required secrets. Neon schema
+migrations are applied, and production Clerk OAuth discovery advertises DCR,
+PKCE S256 and both Fitia scopes. Both required discovery endpoints and health
+return HTTP 200. Unauthenticated MCP requests receive an OAuth challenge.
+The custom alias https://fitia.polacklabs.com also serves this Worker; the
+canonical OAuth resource remains the workers.dev MCP URL above.
+
+Windows Google login succeeded and the renewable session is stored with DPAPI.
+Account, profile, Premium, Peru/Spanish food search, meals and day summary were
+verified against Fitia. Production connector owner signup, remote linking and
+actual ChatGPT OAuth consent remain pending. The empty owner allowlist denies
+access until that identity exists. Writes remain disabled during verification.
+No real Fitia diary mutations were made.
+
+Provisioned resources:
+
+- Cloudflare Worker: `fitia-mcp`, account `fa095e286d4b7effdb319c7cb45a8ba5`.
+- Neon: `fitia-mcp`, project `delicate-forest-75606638`, AWS us-east-1,
+  PostgreSQL 18, production branch, `neondb`; migrations 0000 and 0001 applied.
+- Clerk: `Fitia MCP`, application `app_3ItY9QNK15mz9dUXRgakjWPpECF`, production
+  instance `ins_3ItZVKRvkxSszuBxdtjGu05TajK`.
+- Production issuer: https://clerk.fitia.polacklabs.com; account portal:
+  https://accounts.fitia.polacklabs.com. Five Clerk CNAMEs are verified, and
+  the Worker custom domain has valid HTTPS. No unrelated DNS was changed.
+- Worker secrets: `DATABASE_URL`, `CLERK_JWT_KEY`,
+  `FITIA_SESSION_ENCRYPTION_KEY`; values are never committed.
+
 
 ## Windows installation and login
 
@@ -71,7 +92,7 @@ DPAPI protects against other ordinary Windows users and copied ciphertext. It
 cannot protect secrets from malware running as the same Windows user or an
 administrator. Do not copy DPAPI files to migrate accounts; sign in normally.
 
-## Complete the remote infrastructure
+## Reproduce or maintain the remote infrastructure
 
 1. Sign in to the owner-controlled Clerk and Neon dashboards. Create a dedicated
    Clerk application and Neon PostgreSQL database for this service.
@@ -162,8 +183,12 @@ scopes, MCP schemas/preview semantics, PostgreSQL link expiry/single-use/isolati
 AES-GCM identity binding, refresh CAS and encrypted durable audits. CI covers
 Windows/macOS/Linux; platform-native tests execute on their applicable OS.
 
-Provider authorizations, production database migrations, real Google login,
-remote account linking and ChatGPT end-to-end validation are still outstanding.
+The full 218-test suite passed locally using Bun 1.3.14. The committed Windows
+ACL correction also passed the complete Ubuntu, Windows and macOS CI matrix:
+[CI run 33946555296](https://github.com/DiegoPolack/fitia-cli/actions/runs/33946555296).
+Production owner signup, remote account linking and ChatGPT end-to-end validation
+are still outstanding. Live dinner suggestions correctly returned
+`dietary-review-required` rather than bypassing saved dietary restrictions.
 macOS retains upstream's Keychain behavior; it has not been exercised on this
 Windows machine. Live diary writes are intentionally untested. Native recipe
 suggestions and database-linked writes remain upstream scope limitations.
