@@ -5,6 +5,7 @@ import { join } from "node:path";
 import { DiaryClient, type Fetch, type LogInput, validateDate, validateLog } from "@fitia/core";
 import Ajv from "ajv";
 import { schema } from "../apps/cli/src/contract/index.ts";
+import { windowsPrivatePath } from "../packages/core/src/windows-permissions.ts";
 
 const token = `e30.${Buffer.from(JSON.stringify({ exp: 4102444800 })).toString("base64url")}.sig`;
 const paths: string[] = [];
@@ -172,7 +173,8 @@ test("commit preserves unrelated entries, writes audit before request, and verif
     .map((line) => JSON.parse(line));
   expect(records.map((r) => r.status)).toEqual(["pending", "committed"]);
   expect(records[0].attempt).toBe(records[1].attempt);
-  expect((await stat(file)).mode & 0o777).toBe(0o600);
+  if (process.platform === "win32") expect(await windowsPrivatePath(file)).toBe(true);
+  else expect((await stat(file)).mode & 0o777).toBe(0o600);
   expect((await h.client.log(input)).status).toBe("already-present");
   expect(h.patches()).toBe(1);
   await expect(h.client.log({ ...input, caloriesKcal: 200 })).rejects.toMatchObject({ code: "IDEMPOTENCY_CONFLICT" });
@@ -500,6 +502,14 @@ test("unsafe audit permissions prevent the remote write", async () => {
   const h = await harness();
   const path = join(h.state, `audit-${new Date().toISOString().slice(0, 10)}.jsonl`);
   await writeFile(path, "", { mode: 0o644 });
+  if (process.platform === "win32") {
+    const result = Bun.spawnSync(["icacls.exe", path, "/grant", "*S-1-1-0:(R)"], {
+      stdout: "ignore",
+      stderr: "ignore",
+      windowsHide: true,
+    });
+    expect(result.exitCode).toBe(0);
+  }
   await expect(h.client.log(input)).rejects.toMatchObject({ code: "UNSAFE_AUDIT_LOG" });
   expect(h.patches()).toBe(0);
 });

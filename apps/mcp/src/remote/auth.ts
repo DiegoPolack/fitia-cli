@@ -26,8 +26,10 @@ export function clerkTokenVerifier(options: {
         });
         if (
           claims.iss !== options.issuer ||
+          claims.aud !== options.audience ||
           !clerkUserId.test(claims.sub) ||
           !Number.isSafeInteger(claims.exp) ||
+          claims.exp <= Math.floor(Date.now() / 1000) ||
           typeof claims.client_id !== "string" ||
           claims.client_id.length === 0
         ) {

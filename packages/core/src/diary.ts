@@ -13,7 +13,7 @@ import {
   timestampValue as timestamp,
 } from "./firestore-diary.ts";
 import { decodeFields, summarizeDay } from "./nutrition.ts";
-import { SafeWriteCoordinator, stateDirectory } from "./safe-write.ts";
+import { SafeWriteCoordinator, stateDirectory, type WriteJournal } from "./safe-write.ts";
 import {
   needsDietaryReview,
   plannerMeals,
@@ -164,12 +164,14 @@ export class DiaryClient {
     private fetcher: Fetch = fetch,
     stateDir = stateDirectory(),
     private trustedAccountId?: string,
+    journal?: WriteJournal,
   ) {
     this.firestore = new FirestoreDiaryAdapter(token, timeoutMs, fetcher);
     this.writes = new SafeWriteCoordinator(
       stateDir,
       (document, body, fieldsChanged) => this.firestore.patch(document, body, fieldsChanged),
       (accountId, date) => this.read(accountId, date),
+      journal,
     );
   }
 

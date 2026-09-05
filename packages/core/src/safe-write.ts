@@ -17,6 +17,19 @@ type Receipt = {
 
 type VersionedDocument = { updateTime: string };
 
+export interface WriteLock {
+  writeFile(data: string): Promise<unknown>;
+  sync(): Promise<void>;
+  close(): Promise<void>;
+}
+
+export interface WriteJournal {
+  disabled(): Promise<boolean>;
+  acquire(hash: string): Promise<WriteLock>;
+  release(hash: string): Promise<void>;
+  audit(record: Record<string, unknown>): Promise<void>;
+}
+
 type WritePlan<T extends Receipt, Document extends VersionedDocument, Write> = {
   document: Document;
   accountId: string;
@@ -32,13 +45,17 @@ export class SafeWriteCoordinator<Document extends VersionedDocument, Write> {
     private stateDir: string,
     private patch: (document: Document, body: Write, fieldsChanged: readonly string[]) => Promise<void>,
     private readback: (accountId: string, date: string) => Promise<Document>,
+    private journal?: WriteJournal,
   ) {}
 
   async assertEnabled() {
     let disabled = process.env.FITIA_DISABLE_WRITES === "1";
     try {
-      await lstat(join(this.stateDir, "DISABLE_WRITES"));
-      disabled = true;
+      if (this.journal) disabled ||= await this.journal.disabled();
+      else {
+        await lstat(join(this.stateDir, "DISABLE_WRITES"));
+        disabled = true;
+      }
     } catch (error: any) {
       if (error.code !== "ENOENT")
         throw new CliError(
@@ -68,13 +85,11 @@ export class SafeWriteCoordinator<Document extends VersionedDocument, Write> {
   }: WritePlan<T, Document, Write>) {
     await this.prepareState();
     const lockPath = join(this.stateDir, `operation-${hash}.lock`);
-    let lock: Awaited<ReturnType<typeof open>>;
+    let lock: WriteLock;
     try {
-      lock = await open(
-        lockPath,
-        constants.O_CREAT | constants.O_EXCL | constants.O_WRONLY | constants.O_NOFOLLOW,
-        0o600,
-      );
+      lock = this.journal
+        ? await this.journal.acquire(hash)
+        : await open(lockPath, constants.O_CREAT | constants.O_EXCL | constants.O_WRONLY | constants.O_NOFOLLOW, 0o600);
     } catch {
       throw new CliError(
         "OPERATION_PENDING",
@@ -158,17 +173,26 @@ export class SafeWriteCoordinator<Document extends VersionedDocument, Write> {
       throw reported;
     } finally {
       await lock.close();
-      if (!uncertain) await unlink(lockPath).catch(() => {});
+      if (!uncertain) {
+        if (this.journal) await this.journal.release(hash);
+        else await unlink(lockPath).catch(() => {});
+      }
     }
   }
 
   private async prepareState() {
+    if (this.journal) return;
     await mkdir(this.stateDir, { recursive: true, mode: 0o700 });
     const stat = await lstat(this.stateDir);
+    const windowsPrivate =
+      process.platform === "win32"
+        ? await (await import("./windows-permissions.ts")).windowsPrivatePath(this.stateDir, true)
+        : true;
     if (
+      !windowsPrivate ||
       !stat.isDirectory() ||
       stat.isSymbolicLink() ||
-      (stat.mode & 0o077) !== 0 ||
+      (process.platform !== "win32" && (stat.mode & 0o077) !== 0) ||
       (process.getuid && stat.uid !== process.getuid())
     )
       throw new CliError(
@@ -180,6 +204,7 @@ export class SafeWriteCoordinator<Document extends VersionedDocument, Write> {
   }
 
   private async audit(record: Record<string, unknown>) {
+    if (this.journal) return this.journal.audit(record);
     const path = join(this.stateDir, `audit-${new Date().toISOString().slice(0, 10)}.jsonl`);
     const file = await open(
       path,
@@ -188,7 +213,11 @@ export class SafeWriteCoordinator<Document extends VersionedDocument, Write> {
     );
     try {
       const stat = await file.stat();
-      if (!stat.isFile() || (stat.mode & 0o077) !== 0 || (process.getuid && stat.uid !== process.getuid()))
+      const privatePermissions =
+        process.platform === "win32"
+          ? await (await import("./windows-permissions.ts")).windowsPrivatePath(path)
+          : (stat.mode & 0o077) === 0;
+      if (!stat.isFile() || !privatePermissions || (process.getuid && stat.uid !== process.getuid()))
         throw new CliError(
           "UNSAFE_AUDIT_LOG",
           "The audit log is not private.",

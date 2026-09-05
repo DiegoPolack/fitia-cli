@@ -1,4 +1,5 @@
 import { expect, test } from "bun:test";
+import { generateKeyPairSync, sign } from "node:crypto";
 import { InMemoryTransport } from "../apps/mcp/node_modules/@modelcontextprotocol/server";
 import { createRemoteApp, type RemoteEnv } from "../apps/mcp/src/remote/app.ts";
 import { clerkTokenVerifier } from "../apps/mcp/src/remote/auth.ts";
@@ -27,6 +28,58 @@ const env = {
   MCP_RESOURCE: "https://api.example.test/mcp",
 } as RemoteEnv;
 
+test("real signed OAuth JWTs enforce scopes and private user admission before database access", async () => {
+  const { privateKey, publicKey } = generateKeyPairSync("rsa", { modulusLength: 2048 });
+  const jwtKey = publicKey.export({ type: "spki", format: "pem" }).toString();
+  const encode = (value: unknown) => Buffer.from(JSON.stringify(value)).toString("base64url");
+  const token = (scope: string, sub = "user_owner") => {
+    const now = Math.floor(Date.now() / 1000);
+    const unsigned = `${encode({ alg: "RS256", typ: "at+jwt" })}.${encode({ iss: env.CLERK_ISSUER, aud: env.MCP_RESOURCE, sub, scope, client_id: "client", iat: now, nbf: now - 1, exp: now + 60 })}`;
+    return `${unsigned}.${sign("RSA-SHA256", Buffer.from(unsigned), privateKey).toString("base64url")}`;
+  };
+  const verifier = clerkTokenVerifier({ issuer: env.CLERK_ISSUER, audience: env.MCP_RESOURCE, jwtKey });
+  expect((await verifier.verifyAccessToken(token("fitia:read"))).scopes).toEqual(["fitia:read"]);
+  const app = createRemoteApp({ ...env, CLERK_JWT_KEY: jwtKey, ALLOWED_CLERK_USERS: "user_owner" });
+  const request = (bearer: string) =>
+    app.fetch(
+      new Request(`${env.MCP_RESOURCE}`, {
+        method: "POST",
+        headers: { Host: "api.example.test", Authorization: `Bearer ${bearer}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "tools/list" }),
+      }),
+    );
+  expect((await request(token("fitia:write"))).status).toBe(403);
+  expect((await request(token("fitia:read", "user_stranger"))).status).toBe(403);
+  expect((await request(`${token("fitia:read")}tampered`)).status).toBe(401);
+});
+
+test("OAuth verifier rejects wrong issuer, audience, identity and expired claims", async () => {
+  const valid = {
+    iss: env.CLERK_ISSUER,
+    aud: env.MCP_RESOURCE,
+    sub: "user_valid",
+    exp: Math.floor(Date.now() / 1000) + 60,
+    client_id: "client",
+    scope: "fitia:read",
+  };
+  for (const patch of [
+    { iss: "https://evil.invalid" },
+    { aud: "https://other.invalid/mcp" },
+    { aud: [env.MCP_RESOURCE] },
+    { sub: "other" },
+    { exp: 1 },
+    { client_id: "" },
+  ]) {
+    const verifier = clerkTokenVerifier({
+      issuer: env.CLERK_ISSUER,
+      audience: env.MCP_RESOURCE,
+      jwtKey: "unused",
+      verify: (async () => ({ ...valid, ...patch })) as never,
+    });
+    await expect(verifier.verifyAccessToken("synthetic")).rejects.toMatchObject({ code: "invalid_token" });
+  }
+});
+
 test("remote auth accepts Clerk OAuth access-token JWTs", async () => {
   let headerType: unknown;
   const verifier = clerkTokenVerifier({
@@ -37,6 +90,7 @@ test("remote auth accepts Clerk OAuth access-token JWTs", async () => {
       headerType = options.headerType;
       return {
         iss: "https://clerk.example.test",
+        aud: "https://api.example.test/mcp",
         sub: "user_example",
         exp: Math.floor(Date.now() / 1_000) + 60,
         client_id: "oauth-client",
@@ -92,16 +146,7 @@ test("remote MCP advertises Clerk dynamic client registration", async () => {
     registration_endpoint: "https://clerk.example.test/oauth/register",
     grant_types_supported: ["authorization_code", "refresh_token"],
     token_endpoint_auth_methods_supported: ["client_secret_basic", "none", "client_secret_post"],
-    scopes_supported: [
-      "openid",
-      "profile",
-      "email",
-      "public_metadata",
-      "private_metadata",
-      "offline_access",
-      "fitia:read",
-      "fitia:write",
-    ],
+    scopes_supported: ["openid", "profile", "email", "offline_access", "fitia:read", "fitia:write"],
     code_challenge_methods_supported: ["S256"],
     authorization_response_iss_parameter_supported: true,
   });

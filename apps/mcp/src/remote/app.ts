@@ -11,6 +11,7 @@ import { marked } from "marked";
 import { createServer } from "../server.ts";
 import { clerkTokenVerifier, clerkUserFrom } from "./auth.ts";
 import { importEncryptionKey, randomCode } from "./crypto.ts";
+import { remoteWriteJournal } from "./journal.ts";
 import landing from "./landing.md";
 import { type FitiaSession, SessionRepository } from "./sessions.ts";
 
@@ -22,6 +23,10 @@ export interface RemoteEnv {
   readonly DATABASE_URL: string;
   readonly FITIA_SESSION_ENCRYPTION_KEY: string;
   readonly MCP_RESOURCE: string;
+  readonly FITIA_DISABLE_WRITES?: string;
+  readonly ALLOWED_CLERK_USERS?: string;
+  readonly CLERK_CIMD_ENABLED?: string;
+  readonly CLERK_DCR_ENABLED?: string;
 }
 
 function list(value: string): string[] {
@@ -198,9 +203,27 @@ function renderLanding(): string {
 async function boundedBody(request: Request): Promise<Record<string, unknown>> {
   const length = Number(request.headers.get("content-length") ?? 0);
   if (length > 40_000) throw new Error("Request body too large");
-  const text = await request.text();
-  if (new TextEncoder().encode(text).byteLength > 40_000) throw new Error("Request body too large");
-  return JSON.parse(text);
+  const reader = request.body?.getReader();
+  if (!reader) throw new Error("Missing body");
+  const chunks: Uint8Array[] = [];
+  let size = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    size += value.byteLength;
+    if (size > 40_000) {
+      await reader.cancel();
+      throw new Error("Request body too large");
+    }
+    chunks.push(value);
+  }
+  const joined = new Uint8Array(size);
+  let offset = 0;
+  for (const chunk of chunks) {
+    joined.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  return JSON.parse(new TextDecoder().decode(joined));
 }
 
 export function createRemoteApp(env: RemoteEnv) {
@@ -212,21 +235,13 @@ export function createRemoteApp(env: RemoteEnv) {
     authorization_endpoint: `${issuer}/oauth/authorize`,
     token_endpoint: `${issuer}/oauth/token`,
     revocation_endpoint: `${issuer}/oauth/token/revoke`,
-    registration_endpoint: `${issuer}/oauth/register`,
+    ...(env.CLERK_DCR_ENABLED !== "0" ? { registration_endpoint: `${issuer}/oauth/register` } : {}),
+    ...(env.CLERK_CIMD_ENABLED === "1" ? { client_id_metadata_document_supported: true } : {}),
     jwks_uri: `${issuer}/.well-known/jwks.json`,
     response_types_supported: ["code"],
     grant_types_supported: ["authorization_code", "refresh_token"],
     token_endpoint_auth_methods_supported: ["client_secret_basic", "none", "client_secret_post"],
-    scopes_supported: [
-      "openid",
-      "profile",
-      "email",
-      "public_metadata",
-      "private_metadata",
-      "offline_access",
-      "fitia:read",
-      "fitia:write",
-    ],
+    scopes_supported: ["openid", "profile", "email", "offline_access", "fitia:read", "fitia:write"],
     subject_types_supported: ["public"],
     id_token_signing_alg_values_supported: ["RS256"],
     claims_supported: ["sub", "iss", "aud", "exp", "iat", "email", "name"],
@@ -252,6 +267,14 @@ export function createRemoteApp(env: RemoteEnv) {
     allowedOrigins: list(env.ALLOWED_ORIGINS).map((origin) => new URL(origin).hostname),
   });
 
+  app.onError(
+    () =>
+      new Response(JSON.stringify({ error: "The service could not complete the request" }), {
+        status: 503,
+        headers: { "Content-Type": "application/json", "Cache-Control": "no-store" },
+      }),
+  );
+
   app.use("*", async (context, next) => {
     const rejected = validateBoundary(context.req.raw, env);
     if (rejected) return rejected;
@@ -274,6 +297,8 @@ export function createRemoteApp(env: RemoteEnv) {
   app.post("/link/start", async (context) => {
     const auth = await gate(context.req.raw);
     if (auth instanceof Response) return auth;
+    if (env.ALLOWED_CLERK_USERS !== undefined && !list(env.ALLOWED_CLERK_USERS).includes(clerkUserFrom(auth)))
+      return context.json({ error: "Access denied" }, 403);
     const code = randomCode();
     const repository = new SessionRepository(
       env.DATABASE_URL,
@@ -286,7 +311,13 @@ export function createRemoteApp(env: RemoteEnv) {
   app.post("/link/complete", async (context) => {
     try {
       const body = await boundedBody(context.req.raw);
-      if (typeof body.code !== "string" || typeof body.session !== "object" || body.session === null) throw new Error();
+      if (
+        typeof body.code !== "string" ||
+        !/^[A-Za-z0-9_-]{43}$/.test(body.code) ||
+        typeof body.session !== "object" ||
+        body.session === null
+      )
+        throw new Error();
       const repository = new SessionRepository(
         env.DATABASE_URL,
         await importEncryptionKey(env.FITIA_SESSION_ENCRYPTION_KEY),
@@ -307,11 +338,7 @@ export function createRemoteApp(env: RemoteEnv) {
         "Fitia profile verification request failed",
         "Link code is invalid or expired",
       ]);
-      const code =
-        typeof error === "object" && error !== null && "code" in error && typeof error.code === "string"
-          ? error.code
-          : undefined;
-      console.warn("[fitia-link] rejected", { reason: known.has(message) ? message : "unexpected", code });
+      console.warn("[fitia-link] rejected", { reason: known.has(message) ? message : "unexpected" });
       const linkError =
         message === "Firebase signing key fetch failed"
           ? "FIREBASE_KEYS_FETCH_FAILED"
@@ -334,18 +361,27 @@ export function createRemoteApp(env: RemoteEnv) {
   app.all("/mcp", async (context) => {
     const auth = await gate(context.req.raw);
     if (auth instanceof Response) return auth;
+    if (env.ALLOWED_CLERK_USERS !== undefined && !list(env.ALLOWED_CLERK_USERS).includes(clerkUserFrom(auth)))
+      return context.json({ error: "Access denied" }, 403);
     const repository = new SessionRepository(
       env.DATABASE_URL,
       await importEncryptionKey(env.FITIA_SESSION_ENCRYPTION_KEY),
     );
     const clerkUserId = clerkUserFrom(auth);
     const session = await repository.load(clerkUserId);
-    const handler = createMcpHandler(() =>
+    const handler = createMcpHandler(async () =>
       createServer({
         token: session?.idToken,
         trustedAccountId: session?.uid,
         canWrite: auth.scopes.includes("fitia:write"),
         resourceMetadataUrl,
+        writeJournal: remoteWriteJournal({
+          databaseUrl: env.DATABASE_URL,
+          clerkUserId,
+          fitiaAccountId: session?.uid ?? "unlinked",
+          key: await importEncryptionKey(env.FITIA_SESSION_ENCRYPTION_KEY),
+          disabled: env.FITIA_DISABLE_WRITES === "1",
+        }),
         startLink: async () => {
           const code = randomCode();
           await repository.createLinkCode(clerkUserId, code);

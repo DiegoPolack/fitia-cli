@@ -2,7 +2,10 @@ const encoder = new TextEncoder();
 const decoder = new TextDecoder();
 
 function decodeBase64(value: string): Uint8Array {
-  const normalized = value.replace(/-/g, "+").replace(/_/g, "/");
+  const normalized = value
+    .replace(/[\r\n]/g, "")
+    .replace(/-/g, "+")
+    .replace(/_/g, "/");
   const padded = normalized.padEnd(Math.ceil(normalized.length / 4) * 4, "=");
   const decoded = atob(padded);
   return Uint8Array.from(decoded, (character) => character.charCodeAt(0));

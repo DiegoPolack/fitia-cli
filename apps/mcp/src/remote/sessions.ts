@@ -39,7 +39,7 @@ export interface DatabaseRunner {
   run<A>(use: (client: DatabaseClient) => Promise<A>): Promise<A>;
 }
 
-function neonDatabase(connectionString: string): DatabaseRunner {
+export function neonDatabase(connectionString: string): DatabaseRunner {
   const sql = neon(connectionString, { fullResults: true });
   return {
     run: (use) =>
@@ -116,7 +116,7 @@ export async function verifyFirebaseIdToken(idToken: string, fetcher: typeof fet
 
   let response: Response;
   try {
-    response = await fetcher(FIREBASE_JWKS, { redirect: "manual" });
+    response = await fetcher(FIREBASE_JWKS, { redirect: "manual", signal: AbortSignal.timeout(15000) });
   } catch {
     throw new Error("Firebase signing key fetch failed");
   }
@@ -234,6 +234,8 @@ export class SessionRepository {
     private readonly encryptionKey: CryptoKey,
     database?: DatabaseRunner,
     private readonly refreshSession: (session: FitiaSession) => Promise<FitiaSession> = refresh,
+    private readonly verifyIdentity = verifyFirebaseIdToken,
+    private readonly verifyExistingProfile = verifyProfile,
   ) {
     this.database = database ?? neonDatabase(connectionString);
   }
@@ -261,9 +263,6 @@ export class SessionRepository {
   async consumeLinkCode(code: string, input: FitiaSession): Promise<void> {
     const digest = await hashCode(code);
     const session = validateSession(input);
-    const accountId = await verifyFirebaseIdToken(session.idToken);
-    await verifyProfile(session.idToken, accountId);
-    if (accountId !== session.uid) throw new Error("Fitia account verification failed");
     const resolved = await this.run((database) =>
       database.query<{ clerk_user_id: string }>(
         "SELECT clerk_user_id FROM fitia_link_codes WHERE code_hash = decode($1, 'base64') AND expires_at > now()",
@@ -272,6 +271,9 @@ export class SessionRepository {
     );
     const clerkUserId = resolved.rows[0]?.clerk_user_id;
     if (!clerkUserId) throw new Error("Link code is invalid or expired");
+    const accountId = await this.verifyIdentity(session.idToken);
+    await this.verifyExistingProfile(session.idToken, accountId);
+    if (accountId !== session.uid) throw new Error("Fitia account verification failed");
     const bound = await encryptJson(this.encryptionKey, session, `${clerkUserId}:${accountId}`);
     const consumed = await this.run((database) =>
       database.query<{ clerk_user_id: string }>(
@@ -299,7 +301,8 @@ export class SessionRepository {
     if (consumed.rowCount !== 1) throw new Error("Link code is invalid or expired");
   }
 
-  async load(clerkUserId: string): Promise<FitiaSession | undefined> {
+  async load(clerkUserId: string, retries = 0): Promise<FitiaSession | undefined> {
+    if (retries > 3) throw new Error("Fitia session changed repeatedly; retry the request");
     const row = await this.run(async (client) => {
       const result = await client.query<StoredRow>(
         `SELECT clerk_user_id, fitia_account_id, encode(ciphertext, 'base64') AS ciphertext_base64,
@@ -322,7 +325,20 @@ export class SessionRepository {
     if (saved.uid !== row.fitia_account_id) throw new Error("Stored Fitia account mismatch");
     if (row.expires_at.getTime() > Date.now() + 60_000) return saved;
 
-    const next = await this.refreshSession(saved);
+    let next: FitiaSession;
+    try {
+      next = validateSession(await this.refreshSession(saved));
+    } catch {
+      // A concurrent refresh may have rotated the credential while this request
+      // was in flight. Reload only if the stored version actually changed.
+      const latest = await this.run((client) =>
+        client.query<{ version: string }>("SELECT version FROM fitia_sessions WHERE clerk_user_id = $1", [clerkUserId]),
+      );
+      if (latest.rows[0] && String(latest.rows[0].version) !== String(row.version))
+        return this.load(clerkUserId, retries + 1);
+      throw new Error("Fitia session refresh failed; reconnect the account if retrying fails");
+    }
+    if (next.uid !== saved.uid) throw new Error("Fitia account changed during refresh");
     const encrypted = await encryptJson(this.encryptionKey, next, `${clerkUserId}:${row.fitia_account_id}`);
     const updated = await this.run((client) =>
       client.query(
@@ -339,6 +355,6 @@ export class SessionRepository {
       ),
     );
     if (updated.rowCount === 1) return next;
-    return this.load(clerkUserId);
+    return this.load(clerkUserId, retries + 1);
   }
 }

@@ -34,3 +34,27 @@ export const fitiaLinkCodes = pgTable(
     index("fitia_link_codes_expiry_idx").on(table.expiresAt),
   ],
 );
+
+export const fitiaWriteLocks = pgTable(
+  "fitia_write_locks",
+  {
+    clerkUserId: text("clerk_user_id").notNull(),
+    operationHash: text("operation_hash").notNull(),
+    attempt: text("attempt").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [uniqueIndex("fitia_write_locks_operation_idx").on(table.clerkUserId, table.operationHash)],
+);
+
+export const fitiaWriteAudit = pgTable(
+  "fitia_write_audit",
+  {
+    id: text("id").primaryKey(),
+    clerkUserId: text("clerk_user_id").notNull(),
+    fitiaAccountId: text("fitia_account_id").notNull(),
+    ciphertext: bytea("ciphertext").notNull(),
+    iv: bytea("iv").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [check("fitia_write_audit_iv_length", sql`octet_length(${table.iv}) = 12`)],
+);

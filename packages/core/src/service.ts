@@ -3,6 +3,7 @@ import { FitiaClient } from "./api.ts";
 import { cleanToken, tokenStatus } from "./auth.ts";
 import { DiaryClient, type LogInput, type RefreshInput, type RemoveInput } from "./diary.ts";
 import { CliError } from "./errors.ts";
+import type { WriteJournal } from "./safe-write.ts";
 import type { SuggestInput } from "./suggestions.ts";
 
 export interface FitiaOperations {
@@ -40,6 +41,7 @@ export interface FitiaLayerOptions {
   readonly token?: string;
   readonly timeoutMs?: number;
   readonly trustedAccountId?: string;
+  readonly writeJournal?: WriteJournal;
 }
 
 export const makeFitiaTokenLayer = (options: FitiaLayerOptions = {}) =>
@@ -50,7 +52,7 @@ export const makeFitiaOperations = (options: FitiaLayerOptions = {}) =>
     const timeoutMs = options.timeoutMs ?? 15_000;
     const token = options.token === undefined ? undefined : cleanToken(options.token);
     const client = new FitiaClient(token, timeoutMs);
-    const diary = new DiaryClient(token, timeoutMs, fetch, undefined, options.trustedAccountId);
+    const diary = new DiaryClient(token, timeoutMs, fetch, undefined, options.trustedAccountId, options.writeJournal);
     const source = options.token === undefined ? "none" : "explicit";
 
     return {
