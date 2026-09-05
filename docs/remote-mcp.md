@@ -27,10 +27,10 @@ Use `wrangler secret put DATABASE_URL`, `wrangler secret put CLERK_JWT_KEY`, and
 
 An authenticated connector calls the `fitia-account-link` tool, or an authenticated application calls `POST /link/start`, with a Clerk OAuth bearer token containing `fitia:read`. The response contains a 256-bit, single-use code valid for ten minutes.
 
-On the Mac holding the Fitia Keychain session, pipe that code to the local linker:
+On the Windows PC or Mac holding the Fitia renewable session, run the local linker and paste the code into its hidden prompt:
 
 ```sh
-printf '%s' "$FITIA_LINK_CODE" | fitia-mcp-link https://fitia.cueva.io/mcp
+fitia-mcp-link https://fitia-mcp.diegopolackl.workers.dev/mcp
 ```
 
 The linker refreshes the local session, then sends it in one bounded HTTPS request body to `/link/complete`. The server verifies both the Fitia account and profile before atomically consuming the code and storing the encrypted session. The hosted Worker never attempts Firebase browser login, avoiding dependence on Fitia's Firebase authorized-domain list.
@@ -44,3 +44,7 @@ The linker refreshes the local session, then sends it in one bounded HTTPS reque
 - `GET /health`: configuration-free health response.
 - `POST /link/start`: authenticated one-time code creation.
 - `POST /link/complete`: one-time local session submission.
+
+## This private deployment
+
+See [deployment status and Windows setup](private-deployment.md). The Worker exists but remains inert until the owner completes Clerk and Neon authorization. A health response does not prove OAuth readiness.

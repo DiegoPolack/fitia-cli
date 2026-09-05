@@ -4,17 +4,24 @@
   "main": "src/remote/index.ts",
   "compatibility_date": "2026-08-31",
   "compatibility_flags": ["nodejs_compat"],
-  "rules": [{ "type": "Text", "globs": ["**/*.md"], "fallthrough": true }],
-  "routes": [{ "pattern": "fitia.cueva.io", "custom_domain": true }],
+  "rules": [
+    {
+      "type": "Text",
+      "globs": ["**/*.md"],
+      "fallthrough": true
+    }
+  ],
   "vars": {
-    "ALLOWED_HOSTS": "fitia.cueva.io",
-    "ALLOWED_ORIGINS": "https://fitia.cueva.io",
-    "CLERK_ISSUER": "https://clerk.fitia.cueva.io",
-    "MCP_RESOURCE": "https://fitia.cueva.io/mcp"
+    "ALLOWED_HOSTS": "fitia-mcp.diegopolackl.workers.dev",
+    "ALLOWED_ORIGINS": "https://fitia-mcp.diegopolackl.workers.dev,https://chatgpt.com",
+    "CLERK_ISSUER": "",
+    "MCP_RESOURCE": "https://fitia-mcp.diegopolackl.workers.dev/mcp",
+    "ALLOWED_CLERK_USERS": "",
+    "FITIA_DISABLE_WRITES": "1"
   },
   "observability": {
-    "enabled": true,
-    "logs": { "head_sampling_rate": 1 },
-    "traces": { "enabled": true, "head_sampling_rate": 0.01 }
-  }
+    "enabled": false
+  },
+  "workers_dev": true,
+  "account_id": "fa095e286d4b7effdb319c7cb45a8ba5"
 }

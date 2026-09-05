@@ -34,9 +34,9 @@ Only eaten quick entries have verified consumed macro totals in this release; un
 
 ## Credentials
 
-On macOS use `fitia auth login --wait 300`. The normal Google popup creates a new Fitia session saved in macOS Keychain. It refreshes automatically and verifies the same account. No existing browser storage is inspected. The user must choose their existing Fitia Google account. `auth logout` removes only this CLI's saved session.
+On Windows or macOS use `fitia auth login --wait 300`. The normal Google popup creates a new Fitia session saved using Windows DPAPI or macOS Keychain. It refreshes automatically and verifies the same account. No existing browser storage is inspected. The user must choose their existing Fitia Google account. `auth logout` removes only this CLI's saved session.
 
-FITIA_TOKEN or `--token-stdin` still accept raw Firebase ID tokens without Bearer. These are memory only overrides and are not refreshed. An explicit empty FITIA_TOKEN disables Keychain lookup; unset it to use saved login. Never put secrets in arguments, source, logs, fixtures or chat. Help, schema, and food list do not need auth.
+FITIA_TOKEN or `--token-stdin` still accept raw Firebase ID tokens without Bearer. These are memory only overrides and are not refreshed. An explicit empty FITIA_TOKEN disables saved-session lookup; unset it to use saved login. Never put secrets in arguments, source, logs, fixtures or chat. Help, schema, and food list do not need auth.
 
 ## Diary workflow
 

@@ -15,6 +15,10 @@
 
 Both adapters share one Effect-based core and the same validated, preview-first write operations.
 
+## Private Windows deployment
+
+This fork adds Windows DPAPI credentials and durable remote write audits. See [Windows setup and private deployment status](docs/private-deployment.md). The deployed Worker is currently awaiting Clerk/Neon authorization; ChatGPT linking is not yet complete.
+
 ## Install locally
 
 You need Bun 1.3 or newer.
@@ -52,7 +56,7 @@ Example host configuration:
 }
 ```
 
-On macOS, omit `FITIA_TOKEN` to use the renewable Keychain session created by `fitia auth login`. An explicitly empty `FITIA_TOKEN` disables Keychain lookup. MCP write tools default to a real preview and require `confirm: true` to mutate Fitia. `FITIA_DISABLE_WRITES=1` remains an out-of-band kill switch.
+On Windows or macOS, omit `FITIA_TOKEN` to use the renewable OS-protected session created by `fitia auth login`. An explicitly empty `FITIA_TOKEN` disables saved-session lookup. MCP write tools default to a real preview and require `confirm: true` to mutate Fitia. `FITIA_DISABLE_WRITES=1` remains an out-of-band kill switch.
 
 ## Architecture
 
@@ -77,7 +81,7 @@ fitia food list --country pe --query pollo
 
 The optional query on `food list` is a local substring filter. Use the authenticated `food search` command for the real nutrition database.
 
-On macOS, sign in with your existing Fitia Google account:
+On Windows or macOS, sign in with your existing Fitia Google account:
 
 ```sh
 fitia auth login --wait 300
@@ -86,7 +90,7 @@ fitia search --query palta
 fitia meal get --date 2026-08-30
 ```
 
-The login opens a local page and Google's normal sign in popup. New credentials are stored in macOS Keychain, with automatic refresh and account verification. No existing browser storage is read. `fitia auth logout` removes the CLI's own saved session. `--no-open` prints the local URL without opening a browser. Noninteractive login requires an explicit `--wait` deadline, up to 600 seconds.
+The login opens a local page and Google's normal sign in popup. New credentials are stored using Windows DPAPI or macOS Keychain, with automatic refresh and account verification. No existing browser storage is read. `fitia auth logout` removes the CLI's own saved session. `--no-open` prints the local URL without opening a browser. Noninteractive login requires an explicit `--wait` deadline, up to 600 seconds.
 
 You can still supply a raw Firebase ID token. Do not include `Bearer`, cookies, or the rest of a copied curl command. In your Mac's zsh terminal, this reads the token without showing it or putting it in shell history:
 
@@ -103,7 +107,7 @@ fitia search --query leche --country pe --language es --json
 unset FITIA_TOKEN
 ```
 
-Environment and stdin tokens stay in memory and are never saved or refreshed. They override Keychain, including an explicit empty FITIA_TOKEN value. Unset FITIA_TOKEN to use the saved session. Do not commit tokens or paste fresh credentials into chat.
+Environment and stdin tokens stay in memory and are never saved or refreshed. They override saved credentials, including an explicit empty FITIA_TOKEN value. Unset FITIA_TOKEN to use the saved session. Do not commit tokens or paste fresh credentials into chat.
 
 Food search defaults to Peru, Spanish, and 10 results. Use `--country us --language en` for an English search. The maximum limit is 50; a full result count and pagination are not available. Human output labels nutrition per 100 g or 100 ml. JSON includes the provider's original nutrient amounts and serving sizes. Unknown nutrient bases are not scaled, missing nutrients stay null, and zero-sized placeholder servings become null. Values retain the listed cooking state; no raw/cooked conversion is performed.
 
@@ -115,7 +119,7 @@ For automation, your secret manager can pipe a token directly to a command using
 
 | Command | What it does |
 | --- | --- |
-| `fitia auth login --wait 300` | Google sign in with renewable macOS Keychain storage. |
+| `fitia auth login --wait 300` | Google sign in with renewable OS-protected storage. |
 | `fitia auth logout` | Remove the CLI's saved session only. |
 | `fitia auth status` | Inspect token presence and expiry locally. Does not verify identity. |
 | `fitia account get` | Verify and read your Firebase identity. Shortcut: `fitia whoami`. |

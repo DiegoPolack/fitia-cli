@@ -43,3 +43,8 @@ report.[0-9]_.[0-9]_.[0-9]_.[0-9]_.json
 *.xcappdata/
 private/
 .env.*
+
+# Local Worker secrets and state
+.dev.vars*
+.wrangler/
+*.dpapi
