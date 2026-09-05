@@ -21,7 +21,7 @@
     "clean": "bun run --filter @fitia/core clean && bun run --filter @fitia/cli clean && bun run --filter @fitia/mcp clean",
     "dev:device": "bun dev/device.ts",
     "dev:capture": "bun dev/capture.ts",
-    "prepare": "git rev-parse --git-dir >/dev/null 2>&1 && husky || true"
+    "prepare": "husky"
   },
   "lint-staged": {
     "*.{js,mjs,cjs,ts,mts,cts,json,jsonc}": "biome check --write --no-errors-on-unmatched"
@@ -29,6 +29,7 @@
   "devDependencies": {
     "@biomejs/biome": "^2.5.11",
     "@cloudflare/workers-types": "^5.20260831.1",
+    "@electric-sql/pglite": "^0.5.8",
     "@fitia/core": "workspace:*",
     "@types/bun": "^1.3.14",
     "@types/node": "^24.3.0",

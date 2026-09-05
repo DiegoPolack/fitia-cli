@@ -1,5 +1,6 @@
 export * from "./api.ts";
 export * from "./auth.ts";
+export { credentialStore, credentials } from "./credential-store.ts";
 export * from "./diary.ts";
 export * from "./errors.ts";
 export * from "./foods.ts";

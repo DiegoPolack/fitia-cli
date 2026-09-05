@@ -146,3 +146,44 @@ test("login deadline closes the server without saving a session", async () => {
   await expect(login.result).rejects.toMatchObject({ code: "LOGIN_TIMEOUT" });
   expect(await store.read()).toBeUndefined();
 });
+
+test("slow identity verification cannot save after the login deadline", async () => {
+  const store = memory();
+  const login = await startLogin({
+    waitSeconds: 0.05,
+    store,
+    fetcher: async (url, init) => {
+      await new Promise((resolve) => setTimeout(resolve, 80));
+      return account(url, init);
+    },
+  });
+  const html = await (await fetch(login.url)).text();
+  const csrf = html.match(/'X-Fitia-Login':'([a-f0-9]+)'/)![1]!;
+  const request = fetch(`${login.url}/complete`, {
+    method: "POST",
+    headers: { Origin: new URL(login.url).origin, "Content-Type": "application/json", "X-Fitia-Login": csrf },
+    body: JSON.stringify({ idToken: fresh, refreshToken: "synthetic" }),
+  }).catch(() => undefined);
+  await expect(login.result).rejects.toMatchObject({ code: "LOGIN_TIMEOUT" });
+  await request;
+  await new Promise((resolve) => setTimeout(resolve, 200));
+  expect(await store.read()).toBeUndefined();
+});
+
+test("invalid saved credentials and rejected refreshes do not overwrite the store", async () => {
+  const initial: SavedSession = {
+    version: 1,
+    idToken: token(1),
+    refreshToken: "synthetic",
+    uid: "test-user",
+    email: null,
+  };
+  const store = memory(initial);
+  await expect(
+    sessionToken(store, true, async () => new Response("private-provider-text", { status: 401 })),
+  ).rejects.toMatchObject({ code: "AUTH_REFRESH_REJECTED" });
+  expect(await store.read()).toEqual(initial);
+  await expect(sessionToken(memory({ ...initial, refreshToken: "" }))).rejects.toMatchObject({
+    code: "AUTH_SESSION_INVALID",
+  });
+});

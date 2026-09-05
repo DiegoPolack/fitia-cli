@@ -16,13 +16,13 @@ interface OperationDefinition {
 export const operations = {
   authLogin: {
     cliName: "auth login",
-    description: "Sign in with Google and save a renewable session in macOS Keychain.",
+    description: "Sign in with Google and save a renewable session in the OS-protected credential store.",
     authentication: false,
     risk: "local-credentials",
   },
   authLogout: {
     cliName: "auth logout",
-    description: "Remove only the Fitia CLI session from macOS Keychain.",
+    description: "Remove only the Fitia CLI session from the OS-protected credential store.",
     authentication: false,
     risk: "local-credentials",
   },

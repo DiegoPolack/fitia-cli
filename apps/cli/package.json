@@ -15,7 +15,7 @@
     "bun": ">=1.3.0"
   },
   "scripts": {
-    "build": "rm -rf dist && bun build src/index.ts --target=bun --outdir=dist --entry-naming=fitia.js --sourcemap=external && chmod +x dist/fitia.js",
+    "build": "rm -rf dist && bun build src/index.ts --target=bun --outdir=dist --entry-naming=fitia.js --sourcemap=external && bun ../../scripts/executable.ts dist/fitia.js",
     "typecheck": "tsc --noEmit",
     "clean": "rm -rf dist"
   },

@@ -3,18 +3,10 @@ import { CliError } from "./errors.ts";
 
 const SERVICE = "io.cueva.fitia-cli";
 const ACCOUNT = "session";
-export interface SavedSession {
-  version: 1;
-  idToken: string;
-  refreshToken: string;
-  uid: string;
-  email: string | null;
-}
-export interface SessionStore {
-  read(): Promise<SavedSession | undefined>;
-  save(session: SavedSession): Promise<void>;
-  remove(): Promise<void>;
-}
+
+import { type SavedSession, type SessionStore, validSession } from "./credential-types.ts";
+
+export type { SavedSession, SessionStore } from "./credential-types.ts";
 
 function security(args: string[], input?: string): Promise<{ code: number; output: string }> {
   return new Promise((resolve, reject) => {
@@ -54,6 +46,7 @@ function keychainError() {
 export function keychainStore(service = SERVICE, account = ACCOUNT): SessionStore {
   if (!/^[A-Za-z0-9.-]+$/.test(service) || !/^[A-Za-z0-9.-]+$/.test(account)) throw keychainError();
   return {
+    name: "macos-keychain",
     async read() {
       if (process.platform !== "darwin") return undefined;
       const result = await security(["find-generic-password", "-a", account, "-s", service, "-w"]);
@@ -61,14 +54,7 @@ export function keychainStore(service = SERVICE, account = ACCOUNT): SessionStor
       if (result.code !== 0) throw keychainError();
       try {
         const data = JSON.parse(Buffer.from(result.output.trim(), "base64").toString("utf8"));
-        if (
-          data.version !== 1 ||
-          typeof data.idToken !== "string" ||
-          typeof data.refreshToken !== "string" ||
-          typeof data.uid !== "string" ||
-          !(data.email === null || typeof data.email === "string")
-        )
-          throw Error();
+        if (!validSession(data)) throw Error();
         return data as SavedSession;
       } catch {
         throw keychainError();

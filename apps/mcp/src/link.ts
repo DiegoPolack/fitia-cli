@@ -1,32 +1,64 @@
 #!/usr/bin/env bun
-import { keychain, sessionCredentials } from "@fitia/core";
+import { credentials, FitiaClient, sessionCredentials } from "@fitia/core";
 
 async function readCode(): Promise<string> {
-  if (process.stdin.isTTY) throw new Error("Pipe the one-time link code through stdin");
-  const chunks: Uint8Array[] = [];
-  let size = 0;
-  for await (const chunk of process.stdin) {
-    const bytes = typeof chunk === "string" ? new TextEncoder().encode(chunk) : chunk;
-    size += bytes.byteLength;
-    if (size > 512) throw new Error("Link code input is too large");
-    chunks.push(bytes);
+  const interactive = Boolean(process.stdin.isTTY);
+  if (interactive) {
+    process.stderr.write("Paste the one-time link code (hidden), then press Enter: ");
+    process.stdin.setRawMode(true);
   }
-  const input = Buffer.concat(chunks).toString("utf8").trim();
-  if (!/^[A-Za-z0-9_-]{40,64}$/.test(input)) throw new Error("Invalid one-time link code");
-  return input;
+  return new Promise((resolve, reject) => {
+    let input = "";
+    const cleanup = () => {
+      clearTimeout(timer);
+      process.stdin.removeListener("data", onData);
+      process.stdin.removeListener("end", finish);
+      process.stdin.removeListener("error", fail);
+      if (interactive) {
+        process.stdin.setRawMode(false);
+        process.stderr.write("\n");
+      }
+      process.stdin.pause();
+    };
+    const fail = () => {
+      cleanup();
+      reject(new Error("Link code input failed or timed out"));
+    };
+    const finish = () => {
+      cleanup();
+      const code = input.trim();
+      if (!/^[A-Za-z0-9_-]{43}$/.test(code)) reject(new Error("Invalid one-time link code"));
+      else resolve(code);
+    };
+    const onData = (chunk: Buffer) => {
+      const text = chunk.toString("utf8");
+      if (text.includes("\x03")) return fail();
+      input += text;
+      if (input.length > 512) return fail();
+      if (interactive && /[\r\n]/.test(text)) finish();
+    };
+    const timer = setTimeout(fail, 60_000);
+    process.stdin.on("data", onData).once("end", finish).once("error", fail);
+    process.stdin.resume();
+  });
 }
 
 async function main() {
   const base = process.argv[2] ?? process.env.FITIA_MCP_URL;
   if (!base) throw new Error("Pass the remote MCP HTTPS URL or set FITIA_MCP_URL");
-  const endpoint = new URL("/link/complete", base);
+  const parsed = new URL(base);
+  if (parsed.username || parsed.password || parsed.search || parsed.hash || parsed.pathname !== "/mcp")
+    throw new Error("Use the exact HTTPS /mcp URL without credentials, query, or fragment");
+  const endpoint = new URL("/link/complete", parsed);
   if (endpoint.protocol !== "https:") throw new Error("Remote linking requires HTTPS");
   const code = await readCode();
-  const credentials = await sessionCredentials(keychain, true);
-  const saved = await keychain.read();
-  if (!credentials || !saved || saved.uid !== credentials.uid || saved.idToken !== credentials.token) {
-    throw new Error("No verified Fitia Keychain session is available");
+  const current = await sessionCredentials(credentials, true);
+  const saved = await credentials.read();
+  if (!current || !saved || saved.uid !== current.uid || saved.idToken !== current.token) {
+    throw new Error("No verified Fitia renewable session is available");
   }
+  const account = await new FitiaClient(current.token).account();
+  if (account.id !== saved.uid) throw new Error("Local Fitia account verification failed");
   const response = await fetch(endpoint, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -45,7 +77,10 @@ async function main() {
 }
 
 main().catch((error) => {
-  const message = error instanceof Error ? error.message : "Linking failed";
+  const message =
+    error instanceof Error && !/https?:|token|refresh/i.test(error.message)
+      ? error.message
+      : "Linking failed. Verify the endpoint and local login, then request a new link code.";
   process.stderr.write(`${JSON.stringify({ ok: false, error: { message } })}\n`);
   process.exitCode = 1;
 });

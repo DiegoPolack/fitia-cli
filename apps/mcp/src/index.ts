@@ -1,5 +1,5 @@
 #!/usr/bin/env bun
-import { keychain, sessionCredentials } from "@fitia/core";
+import { credentials, sessionCredentials } from "@fitia/core";
 import { serveStdio } from "@modelcontextprotocol/server/stdio";
 import { createServer } from "./server.ts";
 
@@ -8,7 +8,7 @@ const boundedTimeout =
   Number.isSafeInteger(timeoutMs) && timeoutMs >= 1_000 && timeoutMs <= 120_000 ? timeoutMs : 15_000;
 
 void serveStdio(async () => {
-  const saved = process.env.FITIA_TOKEN === undefined ? await sessionCredentials(keychain, true) : undefined;
+  const saved = process.env.FITIA_TOKEN === undefined ? await sessionCredentials(credentials, true) : undefined;
   return createServer({
     token: process.env.FITIA_TOKEN ?? saved?.token,
     trustedAccountId: saved?.uid,

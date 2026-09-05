@@ -3,9 +3,9 @@ import type { LogInput, MealName, RemoveInput, SuggestInput } from "@fitia/core"
 import {
   CliError,
   cleanToken,
+  credentials,
   DiaryClient,
   FitiaClient,
-  keychain,
   openLogin,
   readTokenStdin,
   requireToken,
@@ -181,13 +181,13 @@ function human(command: string, data: any): string {
       "",
       ...Object.entries(flags).map(([key, value]) => `  --${key.padEnd(17)} ${value.description}`),
       "",
-      "Auth: fitia auth login --wait 300 (macOS Keychain), FITIA_TOKEN, or --token-stdin.",
+      "Auth: fitia auth login --wait 300 (your OS-protected credential store), FITIA_TOKEN, or --token-stdin.",
       "",
       ...help.limitations,
     ].join("\n");
   if (command === "version") return data.version;
   if (command === "auth login")
-    return `Connected as ${safeText(data.email ?? data.accountId)}. Session saved in macOS Keychain.`;
+    return `Connected as ${safeText(data.email ?? data.accountId)}. Session saved in your OS-protected credential store.`;
   if (command === "auth logout") return "Fitia CLI saved session removed. Environment tokens are unchanged.";
   if (command === "day summary") return dayLines(data).join("\n");
   if (command === "meal suggest")
@@ -299,14 +299,18 @@ export async function run(argv = process.argv.slice(2)): Promise<number> {
     const { values, timeoutMs } = parsed;
     json = values.json || !process.stdout.isTTY;
     const needsToken = commandByName.get(command)?.auth;
-    const source = values["token-stdin"] ? "stdin" : process.env.FITIA_TOKEN !== undefined ? "environment" : "keychain";
+    const source = values["token-stdin"]
+      ? "stdin"
+      : process.env.FITIA_TOKEN !== undefined
+        ? "environment"
+        : (credentials.name ?? "credential-store");
     let trustedAccountId: string | undefined;
     let token: string | undefined;
     if (needsToken) {
       if (source === "stdin") token = await readTokenStdin(timeoutMs);
       else if (source === "environment") token = cleanToken(process.env.FITIA_TOKEN);
       else {
-        const saved = await sessionCredentials(keychain, command !== "auth status");
+        const saved = await sessionCredentials(credentials, command !== "auth status");
         token = saved?.token;
         trustedAccountId = saved?.uid;
       }
@@ -328,13 +332,6 @@ export async function run(argv = process.argv.slice(2)): Promise<number> {
         data = tokenStatus(token, source);
         break;
       case "auth login": {
-        if (process.platform !== "darwin")
-          throw new CliError(
-            "KEYCHAIN_UNAVAILABLE",
-            "Saved login currently requires macOS.",
-            "Use FITIA_TOKEN or --token-stdin on this platform.",
-            5,
-          );
         const login = await startLogin({
           waitSeconds: positiveInteger(values.wait, "wait", 600, 300)!,
           onReady(url) {
@@ -346,7 +343,7 @@ export async function run(argv = process.argv.slice(2)): Promise<number> {
         break;
       }
       case "auth logout":
-        await keychain.remove();
+        await credentials.remove();
         data = { removed: true };
         break;
       case "meal get":

@@ -3,19 +3,20 @@ import { randomBytes } from "node:crypto";
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import { type Fetch, FitiaClient } from "./api.ts";
 import { cleanToken, requireToken, tokenStatus } from "./auth.ts";
+import { credentials, type SavedSession, type SessionStore, validSession } from "./credential-store.ts";
 import { CliError } from "./errors.ts";
-import { keychain, type SavedSession, type SessionStore } from "./keychain.ts";
 
 export const FIREBASE_KEY = "AIzaSyDuydfUsIFGRZttSiB3mEy0yBwAnnAa2yA";
 export async function sessionCredentials(
-  store: SessionStore = keychain,
+  store: SessionStore = credentials,
   refresh = true,
   fetcher: Fetch = fetch,
 ): Promise<{ token: string; uid: string } | undefined> {
   const saved = await store.read();
   if (!saved) return undefined;
-  cleanToken(saved.idToken);
-  const expiry = tokenStatus(saved.idToken, "keychain").expiresAt;
+  if (!validSession(saved))
+    throw new CliError("AUTH_SESSION_INVALID", "The saved session is invalid.", "Sign in again.", 3);
+  const expiry = tokenStatus(saved.idToken, "credentials").expiresAt;
   if (!refresh || (expiry && Date.parse(expiry) > Date.now() + 60000)) return { token: saved.idToken, uid: saved.uid };
   let response: Response;
   try {
@@ -60,11 +61,11 @@ export async function sessionCredentials(
   const account = await new FitiaClient(idToken, 15000, fetcher).account();
   if (account.id !== saved.uid)
     throw new CliError("AUTH_ACCOUNT_MISMATCH", "Account verification failed.", "Sign in again.", 3);
-  await store.save({ ...saved, idToken, refreshToken: result.refresh_token });
+  await store.save({ ...saved, idToken, refreshToken: result.refresh_token }, saved);
   return { token: idToken, uid: saved.uid };
 }
 
-export async function sessionToken(store: SessionStore = keychain, refresh = true, fetcher: Fetch = fetch) {
+export async function sessionToken(store: SessionStore = credentials, refresh = true, fetcher: Fetch = fetch) {
   return (await sessionCredentials(store, refresh, fetcher))?.token;
 }
 
@@ -94,7 +95,7 @@ function loginPage(nonce: string, csrf: string) {
   return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>Fitia CLI sign in</title></head>
 <body style="font-family:system-ui;max-width:580px;margin:80px auto;padding:20px"><h1>Connect Fitia CLI</h1>
 <p>This unofficial CLI connects to your existing Fitia account. Choose the same Google account you use in Fitia.</p>
-<p>Your new session will be saved in macOS Keychain so the CLI can refresh it. No meals are changed by signing in. Run <code>fitia auth logout</code> to remove it.</p>
+<p>Your new session will be saved in your OS-protected credential store so the CLI can refresh it. No meals are changed by signing in. Run <code>fitia auth logout</code> to remove it.</p>
 <button id="login" style="padding:14px 24px" disabled>Continue with Google</button><p id="status" role="status">Loading secure sign in…</p>
 <script type="module" nonce="${nonce}">
 import {initializeApp} from 'https://www.gstatic.com/firebasejs/12.4.0/firebase-app.js';
@@ -105,7 +106,7 @@ const button=document.getElementById('login'),status=document.getElementById('st
 button.onclick=async()=>{button.disabled=true;status.textContent='Complete the Google sign in popup.';try{
 const result=await signInWithPopup(auth,new GoogleAuthProvider());
 const response=await fetch(location.pathname+'/complete',{method:'POST',headers:{'Content-Type':'application/json','X-Fitia-Login':'${csrf}'},body:JSON.stringify({idToken:await result.user.getIdToken(),refreshToken:result.user.refreshToken})});
-if(!response.ok)throw Error();status.textContent='Connected. Your session is saved in macOS Keychain. Return to the CLI.';
+if(!response.ok)throw Error();status.textContent='Connected. Your session is saved in your OS-protected credential store. Return to the CLI.';
 }catch{status.textContent='Sign in was not completed. Try again with your existing Fitia account, or check the CLI error.';button.disabled=false;}};
 </script></body></html>`;
 }
@@ -116,8 +117,28 @@ export async function startLogin(options: {
   fetcher?: Fetch;
   onReady?: (url: string) => void;
 }) {
-  const store = options.store ?? keychain,
+  const store = options.store ?? credentials,
     fetcher = options.fetcher ?? fetch;
+  if (!Number.isFinite(options.waitSeconds) || options.waitSeconds <= 0 || options.waitSeconds > 600)
+    throw new CliError(
+      "LOGIN_WAIT_INVALID",
+      "Login wait must be greater than zero and at most 600 seconds.",
+      "Use --wait 300.",
+      2,
+    );
+  if (store.name === "unavailable")
+    throw new CliError(
+      "CREDENTIAL_STORE_UNAVAILABLE",
+      "Renewable login requires Windows or macOS.",
+      "No plaintext fallback is used.",
+      5,
+    );
+  const deadline = Date.now() + options.waitSeconds * 1000;
+  let stopped = false;
+  const assertActive = () => {
+    if (stopped || Date.now() >= deadline)
+      throw new CliError("LOGIN_TIMEOUT", "Sign in timed out before credentials could be saved.", "Sign in again.", 3);
+  };
   const secret = randomBytes(32).toString("hex"),
     csrf = randomBytes(32).toString("hex"),
     nonce = randomBytes(24).toString("base64");
@@ -174,7 +195,7 @@ export async function startLogin(options: {
           throw new CliError("AUTH_INPUT_INVALID", "Login data exceeded the size limit.", "Try signing in again.", 3);
       }
       const data = JSON.parse(body);
-      const result = await finishLogin(data, store, fetcher);
+      const result = await finishLogin(data, store, fetcher, assertActive);
       res.end("Connected");
       resolve(result);
     } catch (error) {
@@ -218,6 +239,7 @@ export async function startLogin(options: {
   process.once("SIGINT", stop);
   process.once("SIGTERM", stop);
   const result = completed.finally(() => {
+    stopped = true;
     clearTimeout(timer);
     const signals = process as unknown as {
       removeListener(event: "SIGINT" | "SIGTERM", listener: () => void): void;
@@ -231,7 +253,7 @@ export async function startLogin(options: {
   return { url: `${origin}/${secret}`, result };
 }
 
-async function finishLogin(data: any, store: SessionStore, fetcher: Fetch) {
+async function finishLogin(data: any, store: SessionStore, fetcher: Fetch, assertActive: () => void) {
   const idToken = requireToken(cleanToken(data.idToken));
   if (
     typeof data.refreshToken !== "string" ||
@@ -252,18 +274,21 @@ async function finishLogin(data: any, store: SessionStore, fetcher: Fetch) {
     uid: account.id,
     email: account.email,
   };
+  assertActive();
   await store.save(session);
   return {
     accountId: account.id,
     email: account.email,
-    storage: "macos-keychain",
-    expiresAt: tokenStatus(idToken, "keychain").expiresAt,
+    storage: store.name ?? "credential-store",
+    expiresAt: tokenStatus(idToken, "credentials").expiresAt,
   };
 }
 
 export function openLogin(url: string) {
-  if (process.platform !== "darwin") return;
-  const child = spawn("/usr/bin/open", [url], { stdio: "ignore" });
+  const command =
+    process.platform === "darwin" ? "/usr/bin/open" : process.platform === "win32" ? "rundll32.exe" : "xdg-open";
+  const args = process.platform === "win32" ? ["url.dll,FileProtocolHandler", url] : [url];
+  const child = spawn(command, args, { stdio: "ignore", windowsHide: true });
   child.on("error", () => {});
   child.unref();
 }

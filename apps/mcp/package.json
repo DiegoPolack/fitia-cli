@@ -17,7 +17,7 @@
   },
   "scripts": {
     "build": "rm -rf dist && bun run build:stdio && bun run build:worker",
-    "build:stdio": "bun build src/index.ts src/link.ts --target=bun --outdir=dist --entry-naming='[dir]/[name].js' --sourcemap=external && mv dist/index.js dist/fitia-mcp.js && mv dist/link.js dist/fitia-mcp-link.js && chmod +x dist/fitia-mcp.js dist/fitia-mcp-link.js",
+    "build:stdio": "bun build src/index.ts src/link.ts --target=bun --outdir=dist --entry-naming='[dir]/[name].js' --sourcemap=external && mv dist/index.js dist/fitia-mcp.js && mv dist/link.js dist/fitia-mcp-link.js && bun ../../scripts/executable.ts dist/fitia-mcp.js dist/fitia-mcp-link.js",
     "build:worker": "wrangler deploy --dry-run --outdir=dist/worker",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",

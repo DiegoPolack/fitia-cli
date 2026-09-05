@@ -36,7 +36,7 @@ export const outputSchemas = {
   authLogin: object({
     accountId: stringSchema,
     email: nullableStringSchema,
-    storage: { const: "macos-keychain" },
+    storage: { enum: ["macos-keychain", "windows-dpapi", "credential-store"] },
     expiresAt: nullableStringSchema,
   }),
   authLogout: object({ removed: booleanSchema }),

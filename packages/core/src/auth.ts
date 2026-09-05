@@ -42,7 +42,7 @@ export function requireToken(token?: string): string {
     throw new CliError(
       "AUTH_EXPIRED",
       "The supplied ID token has expired.",
-      "Supply a fresh token, or unset FITIA_TOKEN to use a renewable Keychain session. Run fitia auth login --wait 300 if needed.",
+      "Supply a fresh token, or unset FITIA_TOKEN to use a renewable OS-protected session. Run fitia auth login --wait 300 if needed.",
       3,
     );
   return token;
