@@ -16,7 +16,7 @@
     "ALLOWED_ORIGINS": "https://fitia-mcp.diegopolackl.workers.dev,https://fitia.polacklabs.com,https://chatgpt.com",
     "CLERK_ISSUER": "https://clerk.fitia.polacklabs.com",
     "MCP_RESOURCE": "https://fitia-mcp.diegopolackl.workers.dev/mcp",
-    "ALLOWED_CLERK_USERS": "",
+    "ALLOWED_CLERK_USERS": "user_3Itb8UB0Xm4qf8UQVt5UdW3TNdw",
     "FITIA_DISABLE_WRITES": "1"
   },
   "observability": {

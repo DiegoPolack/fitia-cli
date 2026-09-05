@@ -15,9 +15,9 @@ canonical OAuth resource remains the workers.dev MCP URL above.
 
 Windows Google login succeeded and the renewable session is stored with DPAPI.
 Account, profile, Premium, Peru/Spanish food search, meals and day summary were
-verified against Fitia. Production connector owner signup, remote linking and
-actual ChatGPT OAuth consent remain pending. The empty owner allowlist denies
-access until that identity exists. Writes remain disabled during verification.
+verified against Fitia. The production connector owner has completed signup and email verification.
+The deployed allowlist contains only that owner. Remote linking and actual
+ChatGPT OAuth consent remain pending. Writes remain disabled during verification.
 No real Fitia diary mutations were made.
 
 Provisioned resources:
@@ -110,7 +110,8 @@ administrator. Do not copy DPAPI files to migrate accounts; sign in normally.
    consent and the exact redirect URI shown by ChatGPT's connector setup. Never
    use wildcard redirect URIs. Copy the Clerk issuer and PEM JWT public key.
 5. Set `CLERK_ISSUER` in Wrangler public vars and `ALLOWED_CLERK_USERS` to the
-   owner's actual `user_...` ID. The committed empty allowlist denies everyone.
+   owner's actual `user_...` ID. The committed allowlist contains this deployment's verified owner; replace it
+   with your own production owner ID for a separate deployment.
 6. Set `DATABASE_URL` and `CLERK_JWT_KEY` using Wrangler secret prompts. The
    encryption key already exists: **do not replace it on ordinary redeployment**.
    No secret value belongs in Wrangler vars, Git, screenshots or documentation.
@@ -186,8 +187,7 @@ Windows/macOS/Linux; platform-native tests execute on their applicable OS.
 The full 218-test suite passed locally using Bun 1.3.14. The committed Windows
 ACL correction also passed the complete Ubuntu, Windows and macOS CI matrix:
 [CI run 33946555296](https://github.com/DiegoPolack/fitia-cli/actions/runs/33946555296).
-Production owner signup, remote account linking and ChatGPT end-to-end validation
-are still outstanding. Live dinner suggestions correctly returned
+Remote account linking and ChatGPT end-to-end validation are still outstanding. Live dinner suggestions correctly returned
 `dietary-review-required` rather than bypassing saved dietary restrictions.
 macOS retains upstream's Keychain behavior; it has not been exercised on this
 Windows machine. Live diary writes are intentionally untested. Native recipe
