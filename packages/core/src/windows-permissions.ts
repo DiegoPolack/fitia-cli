@@ -18,7 +18,13 @@ try {
     [IO.Directory]::SetAccessControl($r.path, $acl)
   }
   $acl = if ($item.PSIsContainer) { [IO.Directory]::GetAccessControl($r.path) } else { [IO.File]::GetAccessControl($r.path) }
-  if ($acl.GetOwner([Security.Principal.SecurityIdentifier]).Value -ne $sid.Value) { throw 'unsafe' }
+  $owner = $acl.GetOwner([Security.Principal.SecurityIdentifier]).Value
+  # Elevated Windows processes can create files owned by Administrators even
+  # under a user-owned private directory. Accept that owner only while elevated;
+  # every allowed access rule must still be restricted below.
+  $principal = New-Object Security.Principal.WindowsPrincipal([Security.Principal.WindowsIdentity]::GetCurrent())
+  $elevatedOwner = !$item.PSIsContainer -and $owner -eq 'S-1-5-32-544' -and $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+  if ($owner -ne $sid.Value -and !$elevatedOwner) { throw 'unsafe' }
   foreach ($rule in $acl.GetAccessRules($true, $true, [Security.Principal.SecurityIdentifier])) {
     if ($rule.AccessControlType -eq 'Allow' -and $rule.IdentityReference.Value -notin @($sid.Value, 'S-1-5-18', 'S-1-5-32-544')) { throw 'unsafe' }
   }
