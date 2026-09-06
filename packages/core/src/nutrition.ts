@@ -1,9 +1,9 @@
+import { diaryEntryMacros } from "./diary-nutrients.ts";
 import { invalidResponse, object } from "./errors.ts";
 
 export const macroKeys = ["caloriesKcal", "proteinG", "carbsG", "fatG"] as const;
 export type Macros = Record<(typeof macroKeys)[number], number>;
 export type MaybeMacros = Record<(typeof macroKeys)[number], number | null>;
-const sourceKeys = ["calories", "proteins", "carbs", "fats"] as const;
 const names = ["breakfast", "snack-1", "lunch", "snack-2", "dinner"];
 export const round = (value: number) => {
   if (!Number.isFinite(value) || Math.abs(value) > 1e9) invalidResponse();
@@ -62,8 +62,9 @@ export function summarizeDay(progress: Record<string, any>, date: string, update
       if (unknownState) unknownStateEntries++;
       else eatenEntries++;
       const missing: string[] = [];
-      macroKeys.forEach((key, index) => {
-        const value = item.type === "2" && !unknownState ? amount(item[sourceKeys[index]!]) : null;
+      const resolved = unknownState ? null : diaryEntryMacros(item);
+      macroKeys.forEach((key) => {
+        const value = resolved?.[key] ?? null;
         if (value === null) {
           consumed[key] = null;
           missing.push(key);
@@ -79,9 +80,11 @@ export function summarizeDay(progress: Record<string, any>, date: string, update
           name: typeof item.name === "string" ? item.name : "Unknown entry",
           reason: unknownState
             ? "Unknown eaten state"
-            : item.type !== "2"
-              ? "Unverified food or recipe serving totals"
-              : `Missing totals: ${missing.join(", ")}`,
+            : item.type !== "0" && item.type !== "1" && item.type !== "2"
+              ? "Unsupported diary entry type"
+              : item.type === "0" || item.type === "1"
+                ? "Missing or invalid food or recipe serving data"
+                : `Missing totals: ${missing.join(", ")}`,
         });
     }
     macroKeys.forEach((key) => {

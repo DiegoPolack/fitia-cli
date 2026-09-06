@@ -61,7 +61,7 @@ test("planned entries never count, including unsupported food objects", () => {
   expect(result.coverage.complete).toBe(true);
   expect(result.meals[1]!.consumed.caloriesKcal).toBe(0);
 });
-test.each(["0", "1", "3", "unexpected"])(
+test.each(["3", "unexpected"])(
   "unsupported eaten type %s leaves macros unknown without losing known subtotals",
   (type) => {
     const p: any = progress();

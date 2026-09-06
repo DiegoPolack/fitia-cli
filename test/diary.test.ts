@@ -16,6 +16,7 @@ function v(input: any): any {
   if (typeof input === "string") return { stringValue: input };
   if (typeof input === "boolean") return { booleanValue: input };
   if (typeof input === "number") return { doubleValue: input };
+  if (Array.isArray(input)) return { arrayValue: { values: input.map(v) } };
   return { mapValue: { fields: Object.fromEntries(Object.entries(input).map(([k, value]) => [k, v(value)])) } };
 }
 function fixture() {
@@ -138,13 +139,36 @@ function conforms(name: string, data: any) {
   expect(validate(data), JSON.stringify(validate.errors)).toBe(true);
 }
 
-test("diary read preserves food names but does not present base-unit nutrition as totals", async () => {
+test("diary read preserves food names but does not invent totals without serving evidence", async () => {
   const h = await harness();
   items(h.document()).food = v({ name: "Food database entry", type: "0", isEaten: true, calories: 1.2 });
   const result = await h.client.get(input.date);
   conforms("meal get", result);
   expect(result.meals[0]!.items[1]!.caloriesKcal).toBeNull();
   expect(result.meals[0]!.items[0]!.caloriesKcal).toBe(80);
+});
+test("diary read resolves verified food serving totals", async () => {
+  const h = await harness();
+  items(h.document()).food = v({
+    name: "Food database entry",
+    type: "0",
+    isEaten: true,
+    calories: 1.2,
+    proteins: 0.2,
+    carbs: 0.1,
+    fats: 0.05,
+    factor: 1,
+    selectedNumberOfServingsRaw: "1.5",
+    servings: [{ size: 100, unit: "g", type: "number", isSelected: true }],
+  });
+  const result = await h.client.get(input.date);
+  conforms("meal get", result);
+  expect(result.meals[0]!.items[1]).toMatchObject({
+    caloriesKcal: 180,
+    proteinG: 30,
+    carbsG: 15,
+    fatG: 7.5,
+  });
 });
 test("dry run uses real validation and reads but creates no write or audit", async () => {
   const h = await harness();

@@ -28,7 +28,15 @@ QuickItemModel.toQuickItemPlanItem and QuickItemPlanItem's decoder establish a s
 | calories | total entry kcal |
 | proteins, carbs, fats | total entry grams, nullable in Fitia; explicit in this CLI |
 
-This is a quick entry, not a full food database object. It does not claim micronutrients, recipe ingredients, or a database association. Normal food entries use type `0` and many additional fields whose conversion is not yet live verified.
+This is a quick entry, not a full food database object. It does not claim micronutrients, recipe ingredients, or a database association. Normal food entries use type `0`; recipes use type `1` and contain their component foods.
+
+### Food and recipe serving totals
+
+Verified September 5, 2026 with an authenticated read of four eaten entries against both Fitia's `consumedCalories` and `nutrientsProgress` aggregates. No diary mutation was used. For a type `0` food, the top-level `calories`, `proteins`, `carbs`, and `fats` values are per selected metric unit. A total requires exactly one selected `g` or `ml` serving, a strict nonnegative decimal `selectedNumberOfServingsRaw`, and a positive `factor`.
+
+When `cookingState` and `selectedCookingState` are equal, the serving multiplier is `selected serving size * number of servings`. When the states differ, it is `selected serving size * number of servings / factor`. A factor other than one without both cooking states is ambiguous and remains unknown. The live record included both same-state and converted foods; the resolved entry calories and all four macros matched Fitia's aggregates within rounding tolerance.
+
+A type `1` recipe is resolved by applying the same verified food rule to every nested food, summing those totals, then multiplying by `selectedNumberOfServingsRaw / servingsPerRecipe`. An empty recipe, incomplete ingredient, invalid serving count, missing conversion evidence, duplicate selected serving, unsupported unit, or future entry type remains nullable. No cached macro is substituted for an unresolved entry.
 
 DailyPlanItemServices exposes field updates as well as whole document replacement. Logging patches only the new item, the consumed calorie aggregate, and the diary's `fcmToken` origin marker to null, using the document updateTime as a concurrency precondition. It must not replace the whole day, overwrite existing foods, create other accounts, or edit user preferences.
 
@@ -58,7 +66,7 @@ Refresh uses the same prewrite audit, killswitch, conditional write, readback, a
 
 ## CLI output and safety
 
-`meal remove --date YYYY-MM-DD --meal breakfast --item-id ID --dry-run|--yes` removes exactly one quick entry (type `2`) from an existing meal. The ID must come from meal get or a log receipt. It does not accept names, wildcards, entire days, or automatic selection. Food and recipe types are refused because their consumed serving totals are not yet verified. An already missing ID returns `already-absent` without a write.
+`meal remove --date YYYY-MM-DD --meal breakfast --item-id ID --dry-run|--yes` removes exactly one quick entry (type `2`) from an existing meal. The ID must come from meal get or a log receipt. It does not accept names, wildcards, entire days, or automatic selection. Food and recipe types remain refused because their deletion and aggregate-update behavior has not been live verified. An already missing ID returns `already-absent` without a write.
 
 Removal uses the existing document PATCH endpoint. The removed item's quoted field path is included in updateMask but omitted from the body, which deletes just that map entry under [Firestore's documented PATCH semantics](https://firebase.google.com/docs/firestore/reference/rest/v1/projects.databases.documents/patch). Setting the item to null is not deletion. The same atomic request updates consumedCalories by subtracting the quick entry's calories only when isEaten is true, and sets fcmToken to null to request a Mobile Refresh. Negative or unknown calorie accounting is refused instead of guessing. Only insignificant floating point subtraction error below 0.000001 kcal is clamped to zero.
 
@@ -66,7 +74,7 @@ The removal receipt contains status (`preview`, `already-absent`, or `committed`
 
 This release verifies removal with synthetic service tests and live previews only. It does not remove a real entry merely to exercise the feature. The prior mobile marker mechanism was verified live; a CLI receipt cannot verify a phone's display.
 
-`meal get --date YYYY-MM-DD` returns the date, Firestore updateTime, and selected meal and item fields. Dates are explicit calendar dates, with no implicit UTC conversion. Unknown entry types remain identifiable without inventing serving totals.
+`meal get --date YYYY-MM-DD` returns the date, Firestore updateTime, and selected meal and item fields. Dates are explicit calendar dates, with no implicit UTC conversion. Verified type `0`, `1`, and `2` entries expose serving-total calories and macros. Incomplete or unknown structures remain identifiable without invented totals.
 
 `meal log --date ... --meal breakfast --name ... --calories ... --protein ... --carbs ... --fat ...` creates a quick entry. Every amount must be explicit, finite, and nonnegative. The command derives and returns a stable idempotency key; `--occurrence 2` distinguishes a second identical entry, and `--idempotency-key` remains available for external retry coordination. The command requires either `--dry-run` or `--yes`. Dry run performs authentication, a fresh diary read, validation and real payload construction; it does not call the write endpoint.
 
@@ -78,7 +86,7 @@ Pending and final receipts use an append only JSONL log with mode 0600 under the
 
 ## Authentication
 
-The public Firebase project configuration explicitly includes localhost in authorizedDomains. Use the normal Firebase Google sign in popup with in memory browser persistence. Verify the issued ID token through account lookup and require an existing Fitia profile. Save the new session only in macOS Keychain; never read an existing browser session. Token refresh uses Google's documented securetoken endpoint and verifies the same account before saving rotated credentials. Other platforms retain environment and stdin authentication.
+The public Firebase project configuration explicitly includes localhost in authorizedDomains. Use the normal Firebase Google sign in popup with in memory browser persistence. Verify the issued ID token through account lookup and require an existing Fitia profile. Save the renewable session in macOS Keychain or the Windows CurrentUser DPAPI credential store; never read an existing browser session. Token refresh uses Google's documented securetoken endpoint and verifies the same account before saving rotated credentials. Other platforms retain explicit environment and stdin authentication without a plaintext renewable-session fallback.
 
 Live authentication, diary reads, and server writes have succeeded on the owner's account. Quick entries and the origin-marker refresh were observed in the iPhone UI. Each CLI receipt still reports `mobileVerified: false` because it cannot observe the phone; cached nutrition scores and other derived app state are not guaranteed by a server response.
 

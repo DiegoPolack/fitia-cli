@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 import { type Fetch, FitiaClient } from "./api.ts";
+import { diaryEntryMacros } from "./diary-nutrients.ts";
 import { CliError, invalidResponse } from "./errors.ts";
 import {
   type FirestoreDocument as Document,
@@ -121,15 +122,12 @@ export function validateRemove(input: RemoveInput) {
 }
 
 function entrySummary(fields: Fields) {
-  const quick = string(fields.type) === "2";
+  const macros = diaryEntryMacros(decodeFields(fields));
   return {
     name: string(fields.name) ?? "Unknown entry",
     type: string(fields.type),
     eaten: fields.isEaten?.booleanValue === true,
-    caloriesKcal: quick ? number(fields.calories) : null,
-    proteinG: quick ? number(fields.proteins) : null,
-    carbsG: quick ? number(fields.carbs) : null,
-    fatG: quick ? number(fields.fats) : null,
+    ...macros,
     amount: string(fields.selectedNumberOfServingsRaw),
   };
 }
@@ -205,7 +203,8 @@ export class DiaryClient {
         };
       }),
       limitations: [
-        "Food and recipe nutrient fields may be base values. Only quick entries (type 2) have totals here.",
+        "Food totals require one selected metric serving, a numeric serving count, and a positive cooking factor.",
+        "Recipe totals require complete resolvable ingredient servings and a positive servings-per-recipe value.",
         "Mobile display and cached nutrition scores depend on Fitia sync.",
       ],
     };

@@ -4,9 +4,9 @@ This is a discovered Fitia boundary with a CLI-defined ranking policy. Verified 
 
 ## Daily summary
 
-Read the same owned `Usuarios/{uid}/dailyRecords/{dd-MM-yyyy}` document as `meal get`. Goals are `mealProgress.targetCalories`, `targetProteins`, `targetCarbs`, `targetFats`, in kcal and grams. Each meal has the same target fields. Sum only eaten quick entries, whose macros are serving totals. Unknown types, missing nutrients, and unknown eaten states produce explicit coverage gaps, never zero consumption. Planned entries do not count. Calories also have the server aggregate `consumedCalories`; disagreement with complete entry totals is surfaced and blocks automatic budgeting.
+Read the same owned `Usuarios/{uid}/dailyRecords/{dd-MM-yyyy}` document as `meal get`. Goals are `mealProgress.targetCalories`, `targetProteins`, `targetCarbs`, `targetFats`, in kcal and grams. Each meal has the same target fields. Sum eaten quick entries and food/recipe entries whose serving totals satisfy the verified rules in `diary-evidence.md`. Unknown types, incomplete serving evidence, missing nutrients, and unknown eaten states produce explicit coverage gaps, never zero consumption. Planned entries do not count. Calories also have the server aggregate `consumedCalories`; disagreement with complete entry totals is surfaced and blocks automatic budgeting.
 
-The cached `nutrientsProgress` is not authoritative. Live evidence: it contained 662.9 kcal while the entries and `consumedCalories` contained 1394.2 kcal after lunch. Recompute from entries without refreshing or writing. Remaining values are signed goal minus consumption, so exceeding a target remains visible. No goal recalculation, diet prescription, or write.
+The cached `nutrientsProgress` is a reconciliation check, not a substitute for missing entry data. Live evidence on August 30 showed a stale cache after a quick-entry write. A separate read-only verification on September 5 resolved two foods and two recipes; their calories and macros matched both Fitia aggregates within rounding tolerance. Recompute from entries without refreshing or writing. Remaining values are signed goal minus consumption, so exceeding a target remains visible. No goal recalculation, diet prescription, or write.
 
 ## Native suggestions
 
