@@ -46,7 +46,8 @@ function foodMacros(item: Record<string, unknown>): MaybeMacros {
     typeof item.selectedCookingState === "string" &&
     item.cookingState === item.selectedCookingState;
   const cookingConversionKnown =
-    factor === 1 || (typeof item.cookingState === "string" && typeof item.selectedCookingState === "string");
+    factor !== null &&
+    (factor === 1 || (typeof item.cookingState === "string" && typeof item.selectedCookingState === "string"));
   const effectiveFactor = cookingConversionKnown ? (sameCookingState ? 1 : factor) : null;
   const multiplier =
     servingSize !== null && servings !== null && effectiveFactor !== null

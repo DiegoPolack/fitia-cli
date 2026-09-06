@@ -136,6 +136,7 @@ test.each([
   ["ambiguous selected serving", food({ servings: [...serving(50), ...serving(100)] })],
   ["unsupported selected unit", food({ servings: serving(1, "oz") })],
   ["invalid serving count", food({ selectedNumberOfServingsRaw: "1,5" })],
+  ["missing cooking factor", food({ factor: undefined })],
   ["unknown cooking conversion", food({ factor: 0.75 })],
   ["empty recipe", { type: "1", selectedNumberOfServingsRaw: "1.0", servingsPerRecipe: 1, foods: {} }],
   ["unsupported type", { type: "3", calories: 10, proteins: 1, carbs: 1, fats: 1 }],
