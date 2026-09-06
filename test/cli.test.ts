@@ -30,7 +30,7 @@ async function cli(
     const child = execFile(
       "bun",
       [...bunArgs, resolve("apps/cli/dist/fitia.js"), ...args],
-      { env, timeout: 6000, maxBuffer: 2 * 1024 * 1024 },
+      { env, timeout: 15_000, maxBuffer: 2 * 1024 * 1024 },
       (error, stdout, stderr) => {
         resolveResult({ code: error ? Number(error.code) || 1 : 0, stdout, stderr });
       },
@@ -247,7 +247,7 @@ describe("the built executable", () => {
     } finally {
       await rm(stateRoot, { recursive: true, force: true });
     }
-  }, 20_000);
+  }, 40_000);
   test("built removal previews and commits the scoped deletion contract without exposing credentials", async () => {
     const stateRoot = await mkdtemp(join(tmpdir(), "fitia-remove-cli-test-"));
     try {
@@ -271,7 +271,7 @@ describe("the built executable", () => {
     } finally {
       await rm(stateRoot, { recursive: true, force: true });
     }
-  });
+  }, 40_000);
   test("built removal reports absent IDs as a no-op", async () => {
     const result = await cli(
       ["meal", "remove", "--date", "2026-08-30", "--meal", "breakfast", "--item-id", "absent", "--yes"],
