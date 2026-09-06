@@ -75,7 +75,7 @@ function harness(options: { status?: number; fail?: boolean; body?: unknown } = 
   const calls: { url: string; init: RequestInit }[] = [];
   const client = new DiaryClient(token, 1000, async (url, init) => {
     calls.push({ url, init });
-    expect(init.redirect).toBe("error");
+    expect(init.redirect).toBe("manual");
     expect(init.signal).toBeDefined();
     if (url.includes("accounts:lookup"))
       return Response.json({ users: [{ localId: "verified-user", emailVerified: true }] });

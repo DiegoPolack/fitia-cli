@@ -86,12 +86,13 @@ async function harness(
   let patches = 0,
     gets = 0;
   const calls: any[] = [];
-  const fetcher: Fetch = async (url, init) => {
+  const fetcher: Fetch = async function (this: void, url, init) {
+    expect(this).toBeUndefined();
     calls.push({ url, init });
     if (url.includes("accounts:lookup"))
       return Response.json({ users: [{ localId: "verified-user", emailVerified: true }] });
     expect(url.startsWith("https://firestore.googleapis.com/")).toBe(true);
-    expect(init.redirect).toBe("error");
+    expect(init.redirect).toBe("manual");
     expect((init.headers as any).Authorization).toBe(`Bearer ${token}`);
     if (init.method === "PATCH") {
       patches++;
@@ -193,12 +194,13 @@ test("logging derives a stable key and occurrence distinguishes identical entrie
 
 test("a trusted saved-session account id skips identity lookup", async () => {
   const h = await harness();
+  const fetcher = h.fetcher;
   const trusted = new DiaryClient(
     token,
     1000,
     async (url, init) => {
       if (url.includes("accounts:lookup")) throw new Error("identity lookup should be skipped");
-      return h.fetcher(url, init);
+      return fetcher(url, init);
     },
     h.state,
     "verified-user",

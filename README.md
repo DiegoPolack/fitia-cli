@@ -17,7 +17,7 @@ Both adapters share one Effect-based core and the same validated, preview-first 
 
 ## Private Windows deployment
 
-This fork adds Windows DPAPI credentials and durable remote write audits. See [Windows setup and private deployment status](docs/private-deployment.md). The deployed Worker is currently awaiting Clerk/Neon authorization; ChatGPT linking is not yet complete.
+This fork adds Windows DPAPI credentials and durable remote write audits. See [Windows setup and private deployment status](docs/private-deployment.md). The private Worker, Clerk OAuth, Neon storage, Windows login, one-time account link, and ChatGPT read tools are live. ChatGPT must grant `fitia:write` on reconnect before its three mutation tools become available; the production write kill switch remains enabled until preview verification finishes.
 
 ## Install locally
 

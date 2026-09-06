@@ -201,7 +201,9 @@ async function refresh(session: FitiaSession): Promise<FitiaSession> {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body: new URLSearchParams({ grant_type: "refresh_token", refresh_token: session.refreshToken }).toString(),
-    redirect: "error",
+    // Cloudflare Workers supports manual redirects; a 3xx remains non-ok and
+    // is rejected without forwarding the renewable credential.
+    redirect: "manual",
     signal: AbortSignal.timeout(15_000),
   });
   if (!response.ok) {

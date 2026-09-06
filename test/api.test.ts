@@ -15,6 +15,15 @@ const user = {
 };
 
 describe("authentication boundaries", () => {
+  test("invokes fetch without binding the client as its receiver", async () => {
+    const fetcher: Fetch = async function (this: void) {
+      expect(this).toBeUndefined();
+      return Response.json({ isPremium: true });
+    };
+
+    expect(await new FitiaClient("token", 1000, fetcher).premium()).toEqual({ isPremium: true });
+  });
+
   test("metadata is explicitly unverified and never includes claims or credentials", () => {
     const status = tokenStatus(cleanToken(token), "environment");
     expect(status.configured).toBe(true);
@@ -50,7 +59,7 @@ describe("authentication boundaries", () => {
     const fetcher: Fetch = async (url, init) => {
       expect(url).toBe("https://app.fitia.app/api/subscription/premium");
       expect(new Headers(init.headers).get("Authorization")).toBe(token);
-      expect(init.redirect).toBe("error");
+      expect(init.redirect).toBe("manual");
       expect(init.signal).toBeInstanceOf(AbortSignal);
       return Response.json({ isPremium: true });
     };

@@ -13,7 +13,7 @@ test("search reproduces the captured read contract at a fixed origin", async () 
     expect(url).toBe("https://us-central1-fitia-27c84.cloudfunctions.net/generalSearchV5");
     expect(init.method).toBe("POST");
     expect(new Headers(init.headers).get("authorization")).toBe(token);
-    expect(init.redirect).toBe("error");
+    expect(init.redirect).toBe("manual");
     expect(init.signal).toBeInstanceOf(AbortSignal);
     expect(JSON.parse(String(init.body))).toEqual({
       search: "sample",

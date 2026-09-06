@@ -43,9 +43,11 @@ Deployment: https://fitia-mcp.diegopolackl.workers.dev/mcp. Worker exists and ha
 all three required Worker secrets. Neon migrations are applied. Production Clerk
 issuer is https://clerk.fitia.polacklabs.com; OAuth discovery is live with DCR and
 read/write scopes. Custom alias: https://fitia.polacklabs.com. Local Windows Google
-login and Fitia reads passed. Production owner signup and email verification are complete. ALLOWED_CLERK_USERS
-contains only the verified owner. Linking and ChatGPT consent remain pending;
-FITIA_DISABLE_WRITES=1 during verification.
+login, Firebase refresh rotation, and Fitia reads passed. Production owner signup,
+email verification, OAuth, one-time linking, and ChatGPT read verification are
+complete. ALLOWED_CLERK_USERS contains only the verified owner. The current
+ChatGPT token is read-only and needs reconnection for fitia:write;
+FITIA_DISABLE_WRITES=1 during preview verification.
 See docs/private-deployment.md for setup, known limitations and readiness gates.
 Never regenerate the encryption key on redeploy: existing data would be unreadable.
 

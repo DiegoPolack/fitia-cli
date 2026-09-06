@@ -5,7 +5,7 @@ import type { FoodSuggestionRequest } from "./suggestions.ts";
 
 const FITIA = "https://app.fitia.app";
 const ACCOUNT = "https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=AIzaSyDuydfUsIFGRZttSiB3mEy0yBwAnnAa2yA";
-export type Fetch = (url: string, init: RequestInit) => Promise<Response>;
+export type Fetch = (this: void, url: string, init: RequestInit) => Promise<Response>;
 
 export class FitiaClient {
   constructor(
@@ -16,9 +16,15 @@ export class FitiaClient {
 
   private async request(url: string, init: RequestInit): Promise<unknown> {
     try {
-      const response = await this.fetcher(url, {
+      // Keep the fetch receiver undefined. Cloudflare Workers rejects a global
+      // fetch function invoked as an object method, while Bun accepts it.
+      const fetcher = this.fetcher;
+      const response = await fetcher(url, {
         ...init,
-        redirect: "error",
+        // Cloudflare Workers implements manual redirects but rejects the
+        // standard "error" mode before issuing the request. We still refuse
+        // redirects because every 3xx response is non-ok and handled below.
+        redirect: "manual",
         signal: AbortSignal.timeout(this.timeoutMs),
       });
       if (!response.ok) {

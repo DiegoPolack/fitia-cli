@@ -89,10 +89,15 @@ export class FirestoreDiaryAdapter {
 
   private async request(url: string, init: RequestInit = {}, writing = false): Promise<any> {
     try {
-      const response = await this.fetcher(url, {
+      // Cloudflare Workers requires the global fetch function to be invoked
+      // without the adapter instance as its JavaScript receiver.
+      const fetcher = this.fetcher;
+      const response = await fetcher(url, {
         ...init,
         headers: { Authorization: `Bearer ${requireToken(this.token)}`, "Content-Type": "application/json" },
-        redirect: "error",
+        // Workers does not implement redirect="error". Manual mode exposes
+        // the 3xx response so the non-ok branch below can reject it safely.
+        redirect: "manual",
         signal: AbortSignal.timeout(this.timeoutMs),
       });
       if (!response.ok) {

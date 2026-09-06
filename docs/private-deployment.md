@@ -14,11 +14,13 @@ The custom alias https://fitia.polacklabs.com also serves this Worker; the
 canonical OAuth resource remains the workers.dev MCP URL above.
 
 Windows Google login succeeded and the renewable session is stored with DPAPI.
-Account, profile, Premium, Peru/Spanish food search, meals and day summary were
-verified against Fitia. The production connector owner has completed signup and email verification.
-The deployed allowlist contains only that owner. Remote linking and actual
-ChatGPT OAuth consent remain pending. Writes remain disabled during verification.
-No real Fitia diary mutations were made.
+An expired ID token was refreshed automatically, verified against the same Fitia
+identity, rotated, and persisted. Account, profile, Premium, Peru/Spanish food
+search, meals, day summary, and safe suggestion handling were verified both
+locally and from ChatGPT. The production connector owner completed OAuth and the
+one-time local link; the deployed allowlist contains only that owner. The current
+ChatGPT grant contains `fitia:read`, while `fitia:write` still requires reconnect.
+Writes remain disabled during verification. No real Fitia diary mutation was made.
 
 Provisioned resources:
 
@@ -144,7 +146,8 @@ and persists the link. Obtain a new code after an uncertain linking result.
 Validate account/profile, calories/protein remaining, today's meals, `pollo`
 search and dinner suggestions in ChatGPT. Preview writes only. A real diary
 mutation requires the owner's approval of the exact entry, date and quantities.
-Actual ChatGPT compatibility remains unverified until this flow succeeds.
+This deployment completed that link and verified the read flow from ChatGPT.
+Reconnect and grant `fitia:write` before testing a mutation-tool preview.
 
 ## Write safety and recovery
 
@@ -184,11 +187,13 @@ scopes, MCP schemas/preview semantics, PostgreSQL link expiry/single-use/isolati
 AES-GCM identity binding, refresh CAS and encrypted durable audits. CI covers
 Windows/macOS/Linux; platform-native tests execute on their applicable OS.
 
-The full 218-test suite passed locally using Bun 1.3.14. The committed Windows
-ACL correction also passed the complete Ubuntu, Windows and macOS CI matrix:
-[CI run 33946555296](https://github.com/DiegoPolack/fitia-cli/actions/runs/33946555296).
-Remote account linking and ChatGPT end-to-end validation are still outstanding. Live dinner suggestions correctly returned
+The full 219-test suite passes locally using Bun 1.3.14, including a regression
+test for Cloudflare's unbound global `fetch` requirement. The committed Windows
+ACL correction passed the complete Ubuntu, Windows and macOS CI matrix; see the
+latest run on the branch for the final Worker compatibility patch. Remote linking
+and ChatGPT read validation pass. Live dinner suggestions correctly returned
 `dietary-review-required` rather than bypassing saved dietary restrictions.
+ChatGPT write-scope reconnection and a preview-only write-tool check remain.
 macOS retains upstream's Keychain behavior; it has not been exercised on this
 Windows machine. Live diary writes are intentionally untested. Native recipe
 suggestions and database-linked writes remain upstream scope limitations.

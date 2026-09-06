@@ -47,4 +47,4 @@ The linker refreshes the local session, then sends it in one bounded HTTPS reque
 
 ## This private deployment
 
-See [deployment status and Windows setup](private-deployment.md). The Worker exists but remains inert until the owner completes Clerk and Neon authorization. A health response does not prove OAuth readiness.
+See [deployment status and Windows setup](private-deployment.md). The private deployment is live, linked to the verified owner, and read-verified from ChatGPT. A health response alone does not prove OAuth, account-link, or tool readiness.
