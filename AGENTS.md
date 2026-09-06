@@ -45,9 +45,10 @@ issuer is https://clerk.fitia.polacklabs.com; OAuth discovery is live with DCR a
 read/write scopes. Custom alias: https://fitia.polacklabs.com. Local Windows Google
 login, Firebase refresh rotation, and Fitia reads passed. Production owner signup,
 email verification, OAuth, one-time linking, and ChatGPT read verification are
-complete. ALLOWED_CLERK_USERS contains only the verified owner. The current
-ChatGPT token is read-only and needs reconnection for fitia:write;
-FITIA_DISABLE_WRITES=1 during preview verification.
+complete. ALLOWED_CLERK_USERS contains only the verified owner. ChatGPT has
+fitia:read and fitia:write, and a confirm:false refresh preview passed without a
+mutation. Production confirmed writes are enabled; set FITIA_DISABLE_WRITES=1
+and redeploy for the emergency stop.
 See docs/private-deployment.md for setup, known limitations and readiness gates.
 Never regenerate the encryption key on redeploy: existing data would be unreadable.
 

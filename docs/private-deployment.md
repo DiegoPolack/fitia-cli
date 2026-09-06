@@ -18,9 +18,12 @@ An expired ID token was refreshed automatically, verified against the same Fitia
 identity, rotated, and persisted. Account, profile, Premium, Peru/Spanish food
 search, meals, day summary, and safe suggestion handling were verified both
 locally and from ChatGPT. The production connector owner completed OAuth and the
-one-time local link; the deployed allowlist contains only that owner. The current
-ChatGPT grant contains `fitia:read`, while `fitia:write` still requires reconnect.
-Writes remain disabled during verification. No real Fitia diary mutation was made.
+one-time local link; the deployed allowlist contains only that owner. ChatGPT has
+now granted both `fitia:read` and `fitia:write`. A `fitia-meal-refresh` call with
+`confirm:false` returned a preview without changing the diary. Confirmed writes
+are enabled behind the independent scope, confirmation, idempotency, concurrency,
+audit, and readback controls. No real Fitia diary mutation was made during
+verification.
 
 Provisioned resources:
 
@@ -146,14 +149,15 @@ and persists the link. Obtain a new code after an uncertain linking result.
 Validate account/profile, calories/protein remaining, today's meals, `pollo`
 search and dinner suggestions in ChatGPT. Preview writes only. A real diary
 mutation requires the owner's approval of the exact entry, date and quantities.
-This deployment completed that link and verified the read flow from ChatGPT.
-Reconnect and grant `fitia:write` before testing a mutation-tool preview.
+This deployment completed that link, verified the read flow from ChatGPT, granted
+both Fitia OAuth scopes, and verified a mutation-tool preview with `confirm:false`.
 
 ## Write safety and recovery
 
 `confirm:false` is the MCP default. Handlers require `fitia:write` independently
-of tool annotations. The global `FITIA_DISABLE_WRITES=1` kill switch is checked
-inside the coordinator. Only exact quick-entry IDs can be removed; no fuzzy
+of tool annotations. Set the global `FITIA_DISABLE_WRITES=1` kill switch and
+redeploy to stop confirmed writes; it is checked inside the coordinator. Only
+exact quick-entry IDs can be removed; no fuzzy
 selection, guessed macros, whole-diary overwrite or unsupported food deletion.
 
 The remote coordinator uses PostgreSQL locks and encrypted audits, not Worker
@@ -193,7 +197,7 @@ ACL correction passed the complete Ubuntu, Windows and macOS CI matrix; see the
 latest run on the branch for the final Worker compatibility patch. Remote linking
 and ChatGPT read validation pass. Live dinner suggestions correctly returned
 `dietary-review-required` rather than bypassing saved dietary restrictions.
-ChatGPT write-scope reconnection and a preview-only write-tool check remain.
+ChatGPT write-scope authorization and the preview-only write-tool check pass.
 macOS retains upstream's Keychain behavior; it has not been exercised on this
 Windows machine. Live diary writes are intentionally untested. Native recipe
 suggestions and database-linked writes remain upstream scope limitations.
