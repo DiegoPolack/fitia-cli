@@ -198,12 +198,14 @@ export class DiaryClient {
           name: Object.entries(mealTypes).find(([, n]) => n === typeId)?.[0] ?? "unknown",
           items: Object.entries(map(meal.mealItems)).map(([itemId, item]) => ({
             id: itemId,
+            sourceId: string(map(item).objectID),
+            sourceSubcollection: string(map(item).subcollection),
             ...entrySummary(map(item)),
           })),
         };
       }),
       limitations: [
-        "Food totals require one selected metric serving, a numeric serving count, and a positive cooking factor.",
+        "Food totals use verified metric or nominal servings; missing nutrition remains null.",
         "Recipe totals require complete resolvable ingredient servings and a positive servings-per-recipe value.",
         "Mobile display and cached nutrition scores depend on Fitia sync.",
       ],

@@ -151,6 +151,8 @@ test("diary read resolves verified food serving totals", async () => {
   const h = await harness();
   items(h.document()).food = v({
     name: "Food database entry",
+    objectID: "PE-F-V-00034427",
+    subcollection: "restaurant",
     type: "0",
     isEaten: true,
     calories: 1.2,
@@ -164,6 +166,9 @@ test("diary read resolves verified food serving totals", async () => {
   const result = await h.client.get(input.date);
   conforms("meal get", result);
   expect(result.meals[0]!.items[1]).toMatchObject({
+    id: "food",
+    sourceId: "PE-F-V-00034427",
+    sourceSubcollection: "restaurant",
     caloriesKcal: 180,
     proteinG: 30,
     carbsG: 15,

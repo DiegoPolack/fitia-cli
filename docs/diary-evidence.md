@@ -32,6 +32,24 @@ This is a quick entry, not a full food database object. It does not claim micron
 
 ### Food and recipe serving totals
 
+September 6 follow-up: nominal foods store a single selected serving with size zero
+(search normalizes it to null), factor one, and explicit `nutrients` with kcal/g
+units. These are provider-serving totals multiplied by the recorded count, not by
+an invented weight. A fractional count already represents a fraction of the base
+serving: do not divide again by the quantity in the serving label. Names/brands
+never select this path. Missing nutrients stay individually null.
+
+Prepared ingredients with factor zero and neither cooking state use no conversion.
+Zero with a cooking state remains unknown. This resolves generated ingredients
+inside recipes without changing the existing positive-factor conversions. The
+September 2, 4 and 6 diaries reconcile all four macros against Fitia after these
+changes. Explicit `macros_per_serving`, when supplied, precedes ingredient fallback;
+ordinary recipe top-level zeros are still not treated as totals.
+
+Meal output keeps `id` as the diary item ID and exposes embedded `objectID` as
+`sourceId`, plus `sourceSubcollection`. Embedded serving/count/cooking data is
+used directly by the resolver. No name search or guessed document path is used.
+
 Verified September 5, 2026 with an authenticated read of four eaten entries against both Fitia's `consumedCalories` and `nutrientsProgress` aggregates. No diary mutation was used. For a type `0` food, the top-level `calories`, `proteins`, `carbs`, and `fats` values are per selected metric unit. A total requires exactly one selected `g` or `ml` serving, a strict nonnegative decimal `selectedNumberOfServingsRaw`, and a positive `factor`.
 
 When `cookingState` and `selectedCookingState` are equal, the serving multiplier is `selected serving size * number of servings`. When the states differ, it is `selected serving size * number of servings / factor`. A factor other than one without both cooking states is ambiguous and remains unknown. The live record included both same-state and converted foods; the resolved entry calories and all four macros matched Fitia's aggregates within rounding tolerance.

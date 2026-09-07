@@ -102,6 +102,8 @@ export const outputSchemas = {
         items: array(
           object({
             id: stringSchema,
+            sourceId: nullableStringSchema,
+            sourceSubcollection: nullableStringSchema,
             name: stringSchema,
             type: nullableStringSchema,
             eaten: booleanSchema,

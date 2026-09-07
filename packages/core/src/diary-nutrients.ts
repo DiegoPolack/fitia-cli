@@ -38,6 +38,27 @@ function selectedMetricServing(item: Record<string, unknown>): number | null {
 }
 
 function foodMacros(item: Record<string, unknown>): MaybeMacros {
+  const selected = Array.isArray(item.servings) ? item.servings.filter((s) => record(s)?.isSelected === true) : [];
+  const serving = selected.length === 1 ? record(selected[0]) : null;
+  // Fitia's single nominal serving uses zero (normalized search output: null)
+  // instead of a metric weight. Its nutrient map contains totals per serving.
+  if (
+    serving &&
+    Array.isArray(item.servings) &&
+    item.servings.length === 1 &&
+    (serving.size === 0 || serving.size === null) &&
+    item.factor === 1
+  ) {
+    const count = decimal(item.selectedNumberOfServingsRaw);
+    const nutrients = record(item.nutrients);
+    return Object.fromEntries(
+      macroKeys.map((key, index) => {
+        const n = record(nutrients?.[["calories", "protein", "carbs", "fat"][index]!]);
+        const value = n?.unit === (index === 0 ? "kcal" : "g") ? nonnegative(n.size) : null;
+        return [key, value === null || count === null ? null : round(value * count)];
+      }),
+    ) as MaybeMacros;
+  }
   const servingSize = selectedMetricServing(item);
   const servings = decimal(item.selectedNumberOfServingsRaw);
   const factor = positive(item.factor);
@@ -48,7 +69,9 @@ function foodMacros(item: Record<string, unknown>): MaybeMacros {
   const cookingConversionKnown =
     factor !== null &&
     (factor === 1 || (typeof item.cookingState === "string" && typeof item.selectedCookingState === "string"));
-  const effectiveFactor = cookingConversionKnown ? (sameCookingState ? 1 : factor) : null;
+  // Generated prepared foods use zero to indicate no cooking conversion.
+  const noConversion = item.factor === 0 && item.cookingState == null && item.selectedCookingState == null;
+  const effectiveFactor = noConversion ? 1 : cookingConversionKnown ? (sameCookingState ? 1 : factor) : null;
   const multiplier =
     servingSize !== null && servings !== null && effectiveFactor !== null
       ? (servingSize * servings) / effectiveFactor
@@ -62,6 +85,16 @@ function foodMacros(item: Record<string, unknown>): MaybeMacros {
 }
 
 function recipeMacros(item: Record<string, unknown>): MaybeMacros {
+  const perServing = record(item.macros_per_serving);
+  if (perServing) {
+    const count = decimal(item.selectedNumberOfServingsRaw);
+    return Object.fromEntries(
+      macroKeys.map((key, index) => {
+        const value = nonnegative(perServing[["calories", "protein", "carbs", "fat"][index]!]);
+        return [key, count === null || value === null ? null : round(value * count)];
+      }),
+    ) as MaybeMacros;
+  }
   const foods = record(item.foods);
   const servings = decimal(item.selectedNumberOfServingsRaw);
   const servingsPerRecipe = positive(item.servingsPerRecipe);
