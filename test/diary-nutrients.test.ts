@@ -91,6 +91,31 @@ test("food serving totals use the selected metric serving and numeric count", ()
   expect(diaryEntryMacros(food())).toEqual({ caloriesKcal: 200, proteinG: 10, carbsG: 20, fatG: 5 });
 });
 
+test("historical recipe ingredient with a yield factor but no states uses its recorded portion", () => {
+  const ingredient = food({
+    calories: 0.85,
+    proteins: 0.0279,
+    carbs: 0.147,
+    fats: 0.0163,
+    factor: 2.5,
+    selectedNumberOfServingsRaw: "0.35",
+    servings: [{ size: 125, unit: "g", isSelected: false }, ...serving(100)],
+  });
+  const recipe = { type: "1", selectedNumberOfServingsRaw: "0.5", servingsPerRecipe: 1, foods: { ingredient } };
+  expect(diaryEntryMacros(ingredient)).toEqual({ caloriesKcal: 29.75, proteinG: 0.9765, carbsG: 5.145, fatG: 0.5705 });
+  expect(diaryEntryMacros(recipe)).toEqual({ caloriesKcal: 14.875, proteinG: 0.48825, carbsG: 2.5725, fatG: 0.28525 });
+  expect(diaryEntryMacros(recipe)).toEqual(diaryEntryMacros(structuredClone(recipe)));
+});
+
+test.each([
+  { factor: 2.5, cookingState: "Raw" },
+  { factor: 2.5, selectedCookingState: "Boiled" },
+  { factor: -1 },
+  { factor: undefined },
+])("missing conversion evidence stays unknown: %j", (fields) => {
+  expect(diaryEntryMacros(food(fields)).caloriesKcal).toBeNull();
+});
+
 test("cooking factor applies only when the selected cooking state differs", () => {
   expect(
     diaryEntryMacros(
@@ -207,7 +232,7 @@ test.each([
   ["unsupported selected unit", food({ servings: serving(1, "oz") })],
   ["invalid serving count", food({ selectedNumberOfServingsRaw: "1,5" })],
   ["missing cooking factor", food({ factor: undefined })],
-  ["unknown cooking conversion", food({ factor: 0.75 })],
+  ["unknown cooking conversion", food({ factor: 0.75, cookingState: "Raw" })],
   ["empty recipe", { type: "1", selectedNumberOfServingsRaw: "1.0", servingsPerRecipe: 1, foods: {} }],
   ["unsupported type", { type: "3", calories: 10, proteins: 1, carbs: 1, fats: 1 }],
 ])("%s fails closed instead of inventing totals", (_name, entry) => {

@@ -69,8 +69,10 @@ function foodMacros(item: Record<string, unknown>): MaybeMacros {
   const cookingConversionKnown =
     factor !== null &&
     (factor === 1 || (typeof item.cookingState === "string" && typeof item.selectedCookingState === "string"));
-  // Generated prepared foods use zero to indicate no cooking conversion.
-  const noConversion = item.factor === 0 && item.cookingState == null && item.selectedCookingState == null;
+  // A stored factor alone does not request a cooking conversion. Historical
+  // foods can retain a yield factor while neither cooking state is present.
+  const noConversion =
+    nonnegative(item.factor) !== null && item.cookingState == null && item.selectedCookingState == null;
   const effectiveFactor = noConversion ? 1 : cookingConversionKnown ? (sameCookingState ? 1 : factor) : null;
   const multiplier =
     servingSize !== null && servings !== null && effectiveFactor !== null

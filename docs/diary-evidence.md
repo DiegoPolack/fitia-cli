@@ -32,6 +32,15 @@ This is a quick entry, not a full food database object. It does not claim micron
 
 ### Food and recipe serving totals
 
+Historical follow-up (August 28 diary): an ingredient carries factor 2.5, selected
+100 g serving, count 0.35, but neither cookingState nor selectedCookingState.
+The factor alone is not an active conversion. Using the recorded 35 g directly
+reconciles all four day nutrients with Fitia. Apply no conversion when both states
+are absent and the factor is finite/nonnegative. Continue rejecting missing or
+negative factors and incomplete non-unit state pairs. The recipe's top-level
+nutrients are zero placeholders, so ingredient reconstruction remains necessary.
+No cached total, name lookup, or aggregate difference is used to fill nutrients.
+
 September 6 follow-up: nominal foods store a single selected serving with size zero
 (search normalizes it to null), factor one, and explicit `nutrients` with kcal/g
 units. These are provider-serving totals multiplied by the recorded count, not by
