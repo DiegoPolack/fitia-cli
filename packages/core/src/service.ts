@@ -3,6 +3,7 @@ import { FitiaClient } from "./api.ts";
 import { cleanToken, tokenStatus } from "./auth.ts";
 import { DiaryClient, type LogInput, type RefreshInput, type RemoveInput } from "./diary.ts";
 import { CliError } from "./errors.ts";
+import type { DaySummary } from "./nutrition.ts";
 import type { WriteJournal } from "./safe-write.ts";
 import type { SuggestInput } from "./suggestions.ts";
 
@@ -19,7 +20,7 @@ export interface FitiaOperations {
     limit?: number,
   ) => Effect.Effect<unknown, CliError>;
   readonly meal: (date: string) => Effect.Effect<unknown, CliError>;
-  readonly summary: (date: string) => Effect.Effect<unknown, CliError>;
+  readonly summary: (date: string) => Effect.Effect<DaySummary, CliError>;
   readonly suggest: (input: SuggestInput) => Effect.Effect<unknown, CliError>;
   readonly log: (input: LogInput) => Effect.Effect<unknown, CliError>;
   readonly refresh: (input: RefreshInput) => Effect.Effect<unknown, CliError>;

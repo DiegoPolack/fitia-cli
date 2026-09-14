@@ -11,6 +11,7 @@ import { marked } from "marked";
 import { createServer } from "../server.ts";
 import { clerkTokenVerifier, clerkUserFrom } from "./auth.ts";
 import { importEncryptionKey, randomCode } from "./crypto.ts";
+import { GainerConfigRepository } from "./gainer-config.ts";
 import { remoteWriteJournal } from "./journal.ts";
 import landing from "./landing.md";
 import { type FitiaSession, SessionRepository } from "./sessions.ts";
@@ -369,19 +370,21 @@ export function createRemoteApp(env: RemoteEnv) {
     );
     const clerkUserId = clerkUserFrom(auth);
     const session = await repository.load(clerkUserId);
+    const writeJournal = remoteWriteJournal({
+      databaseUrl: env.DATABASE_URL,
+      clerkUserId,
+      fitiaAccountId: session?.uid ?? "unlinked",
+      key: await importEncryptionKey(env.FITIA_SESSION_ENCRYPTION_KEY),
+      disabled: env.FITIA_DISABLE_WRITES === "1",
+    });
     const handler = createMcpHandler(async () =>
       createServer({
         token: session?.idToken,
         trustedAccountId: session?.uid,
         canWrite: auth.scopes.includes("fitia:write"),
         resourceMetadataUrl,
-        writeJournal: remoteWriteJournal({
-          databaseUrl: env.DATABASE_URL,
-          clerkUserId,
-          fitiaAccountId: session?.uid ?? "unlinked",
-          key: await importEncryptionKey(env.FITIA_SESSION_ENCRYPTION_KEY),
-          disabled: env.FITIA_DISABLE_WRITES === "1",
-        }),
+        writeJournal,
+        gainerConfig: new GainerConfigRepository({ databaseUrl: env.DATABASE_URL, clerkUserId, journal: writeJournal }),
         startLink: async () => {
           const code = randomCode();
           await repository.createLinkCode(clerkUserId, code);

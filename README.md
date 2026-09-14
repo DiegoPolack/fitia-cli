@@ -223,3 +223,7 @@ This runs Biome, typechecks every workspace, builds both Bun executables, and ru
 `bun install` runs Husky's setup when the checkout has a `.git` directory. The pre-commit hook uses lint-staged to apply Biome only to staged JavaScript, TypeScript, JSON, and JSONC files. Run `bun run lint:fix` to format and safely fix the whole maintained codebase.
 
 `meal log` adds entries, `meal remove` removes one quick entry, and `meal refresh` only clears the diary's device marker. All implement preview, explicit confirmation, a synced audit entry before the request, a kill switch, concurrency checks and readback. Profile, payment and subscription mutations remain out of scope. There is no generic request command.
+
+## Polack Labs gainer
+
+The MCP includes `fitia-gainer-calculate`, `fitia-gainer-config-get`, and preview-first `fitia-gainer-config-update`. The calculator uses the existing live daily summary, versioned recipe, and per-user sweetener preferences. See [gainer documentation](docs/polack-labs-gainer.md) and [the bundled skill](skills/fitia-gainer/SKILL.md).

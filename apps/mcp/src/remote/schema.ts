@@ -1,5 +1,12 @@
 import { sql } from "drizzle-orm";
-import { bigint, check, customType, index, pgTable, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
+import { bigint, check, customType, index, jsonb, pgTable, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
+
+export const fitiaGainerConfig = pgTable("fitia_gainer_config", {
+  clerkUserId: text("clerk_user_id").primaryKey(),
+  config: jsonb("config").notNull().default({}),
+  version: bigint("version", { mode: "number" }).notNull().default(1),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
 
 const bytea = customType<{ data: Uint8Array }>({
   dataType: () => "bytea",

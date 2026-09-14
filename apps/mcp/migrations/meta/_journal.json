@@ -15,6 +15,13 @@
       "when": 1788583435179,
       "tag": "0001_noisy_boom_boom",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1789361286373,
+      "tag": "0002_thick_praxagora",
+      "breakpoints": true
     }
   ]
 }
