@@ -368,7 +368,7 @@ export function createServer(options: ServerOptions = {}) {
     "fitia-gainer-calculate",
     {
       description:
-        "Calculate Polack Labs Mass Gainer v1 from the same live summary as fitia-day-summary. Use for batido/gainer questions; default sweetener=auto and saved mode (initially fitia_optimal). Never reconstruct the recipe from memory. Read-only; returns exact/practical amounts, macros, cost subtotal, projections and meal-log payloads.",
+        "Calculate Polack Labs Mass Gainer v1 from the same live summary as fitia-day-summary. For batido/gainer decisions use fitia_optimal: optimizes all four metrics against this MCP's 90-110% green-range convention, including no drink; scores practical whole-unit quantities. Use calories for an explicit kcal amount. Default sweetener=auto and saved mode. Never reconstruct the recipe from memory. Read-only; returns exact/practical amounts, macros, cost, greenRanges, optimization reasons, projections and meal-log payloads.",
       inputSchema: z.strictObject({
         date,
         mode: z.enum(["calories", "fitia_optimal"]).optional(),

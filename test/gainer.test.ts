@@ -137,31 +137,33 @@ test("practical macros and logging match rounded ingredient amounts", () => {
   expect(result.exactMealLog).toMatchObject(result.nutrition);
   expect(result.practicalProjection.consumedAfter.caloriesKcal).toBeCloseTo(2000 + kcal, 5);
 });
-test("Fitia optimal reads remaining values and reduces against fat without changing proportions", () => {
+test("Fitia optimal uses green headroom without changing proportions or fixed ingredients", () => {
   const day = gainerDay();
-  day.remaining.fatG = 3;
   const result = drink(
     { mode: "fitia_optimal", targetCaloriesKcal: undefined, sweetener: "honey_only" },
     defaultGainerConfig(),
     day,
   );
   expect(result.targetCaloriesKcal).toBe(500);
-  expect(result.status).toBe("acceptable");
-  expect(result.baseMix.scaleFactor).toBeCloseTo(3 / 15.41, 10);
-  expect(result.nutrition.caloriesKcal).toBeLessThanOrEqual(500);
-  expect(result.nutrition.fatG).toBe(3);
+  expect(result.optimization?.maxAdditionalCaloriesKcal).toBe(750);
+  expect(result.nutrition.caloriesKcal).toBeLessThanOrEqual(750);
+  expect(result.practicalNutrition.caloriesKcal).toBeLessThanOrEqual(750);
+  for (let index = 0; index < result.ingredients.length; index++) {
+    const ingredient = result.ingredients[index]!;
+    expect("exactG" in ingredient ? ingredient.exactG : ingredient.exactMl).toBeCloseTo(
+      gainerRecipe.ingredients[index]!.amount * result.baseMix.scaleFactor,
+      8,
+    );
+  }
   expect(result.sweetener.honeyTablespoons).toBe(3);
   expect(result.creatineG).toBe(5);
   expect(result.water.exactMl).toBeCloseTo(600 * result.baseMix.scaleFactor, 8);
 });
-test("optimal refuses excess fat, insufficient carbs and explicit calorie overrides", () => {
+test("optimal rejects explicit calorie overrides and requires complete goals", () => {
   const input = { mode: "fitia_optimal", targetCaloriesKcal: undefined, sweetener: "honey_only" } as const;
   const day = gainerDay();
-  day.remaining.fatG = -15;
-  expect(calc(input, defaultGainerConfig(), day).status).toBe("not_recommended");
-  day.remaining.fatG = 20;
-  day.remaining.carbsG = 30;
-  expect(calc(input, defaultGainerConfig(), day).status).toBe("not_recommended");
+  day.goals.fatG = null;
+  expect(calc(input, defaultGainerConfig(), day).status).toBe("needs_input");
   expect(() => calc({ mode: "fitia_optimal" })).toThrow("requires mode=calories");
 });
 test("incomplete consumption is not zero; explicit calorie mode preserves null projections", () => {
@@ -175,20 +177,22 @@ test("incomplete consumption is not zero; explicit calorie mode preserves null p
   );
   expect(drink({}, defaultGainerConfig(), day).projection.consumedAfter.carbsG).toBeNull();
 });
-test("optimal is deterministic and keeps exact calories/fat/carbs within remaining across budgets", () => {
+test("optimal is deterministic and respects calorie green maximum across budgets", () => {
   for (const kcal of [100, 200, 500, 800, 1200])
     for (const fat of [0, 3, 15, 40])
       for (const carbs of [10, 50, 150, 300]) {
         const day = gainerDay();
         day.remaining = { caloriesKcal: kcal, fatG: fat, carbsG: carbs, proteinG: 50 };
+        day.goals = { caloriesKcal: 2000 + kcal, fatG: 50 + fat, carbsG: 200 + carbs, proteinG: 150 };
         const input = { mode: "fitia_optimal", targetCaloriesKcal: undefined, sweetener: "honey_only" } as const;
         const result = calc(input, defaultGainerConfig(), day);
         expect(result).toEqual(calc(input, defaultGainerConfig(), day));
         expect(result.baseMix.scaleFactor).toBeGreaterThanOrEqual(0);
         if ("nutrition" in result) {
-          expect(result.nutrition.caloriesKcal).toBeLessThanOrEqual(kcal + 1e-6);
-          expect(result.nutrition.fatG).toBeLessThanOrEqual(fat + 1e-6);
-          expect(result.nutrition.carbsG).toBeLessThanOrEqual(carbs + 1e-6);
+          const maximum = result.greenRanges!.caloriesKcal.max - 2000;
+          expect(result.nutrition.caloriesKcal).toBeLessThanOrEqual(maximum + 1e-6);
+          expect(result.practicalNutrition.caloriesKcal).toBeLessThanOrEqual(maximum + 1e-6);
+          expect(result.optimization!.score.after).toBeLessThan(result.optimization!.score.before);
         }
       }
 });

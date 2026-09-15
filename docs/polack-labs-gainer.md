@@ -19,24 +19,59 @@ calorie scale = (target kcal − sweetener kcal) / base-mix kcal
 `calories` uses an explicit `targetCaloriesKcal`, or the live day's remaining
 calories if omitted. `fitia_optimal` (initial default) uses the same `summary()`
 core service as `fitia-day-summary`, in process, once per calculation. It requires
-complete diary coverage and all remaining macros. Its scale is the minimum of
-the calorie scale, remaining fat after sweeteners / base fat, and remaining
-carbs after sweeteners / base carbs. These are strict ceilings, not a clinical
-optimization. Protein impact is reported without altering the recipe.
+complete diary coverage, goals and consumption for all four metrics. Its internal
+`GREEN_RANGE_LOWER` / `GREEN_RANGE_UPPER` define 90–110% of each target as green.
+This is an explicit MCP convention, not inferred from or experimentally verified
+against Fitia's UI. The calorie ceiling is green max minus consumed calories;
+being above the central target does not automatically rule out a drink.
 
-Full portions that fit return `recommended`; portions reduced by macro ceilings
-return `acceptable`. No calorie budget, no fat/carb room, or no measurable mix
-returns `not_recommended`. Unknown inventory or incomplete automatic budgeting
+The deterministic search includes no drink (no sweeteners either), exact green
+boundary scales, and whole-gram rounding transitions. At ordinary daily budgets
+it covers every practical nutritional serving. Work is bounded to 1024 transition
+steps per ingredient for unusually large targets, plus neighbors of every green
+boundary. Recipe proportions and configured sweeteners remain fixed.
+
+Candidates are scored using the **practical** nutrition also returned for logging.
+For each metric, normalized shortfall below green costs 1, excess above green
+costs 0.5, and being outside green adds 0.05. Calories have weight 4; each macro
+has weight 1. When a metric was already high, its existing excess is a constant
+and further increments cost 0.1 rather than 0.5; more protein never earns a reward.
+Inside green there is zero nutritional penalty. Added kcal / calorie target
+costs another 0.005. Normalization uses max(target, 1), including zero targets.
+All weights and tolerances live in `optimizationPolicy` and are returned for
+explanation. Candidates are ordered by size; score differences within 1e-6 keep
+the smaller serving. Both exact and practical calories must fit the upper band.
+This is a transparent weighted compromise, not a clinical optimization or a
+strict lexicographic guarantee about the number of green metrics.
+
+All four metrics green after a drink returns `recommended`; the best beneficial
+compromise returns `acceptable`. Existing top-level statuses are preserved.
+`optimization.outcome` distinguishes `all_green`, `best_available`,
+`limited_by_calories`, `not_needed` (already all green) and `not_beneficial`
+(zero drink wins). The latter two use `not_recommended` and a null log payload.
+Unknown inventory or incomplete automatic budgeting
 returns `needs_input`. Honey alone over the target returns
 `sweetener_exceeds_target`, its excess, and the maximum honey grams that would
-fit. Configured sweeteners are never silently replaced or reduced. Explicit
-targets are accepted only in `calories` mode.
+fit, using upper-band headroom in optimal mode. Configured sweeteners are never
+silently replaced or reduced. Explicit targets are accepted only in `calories` mode.
+
+Additive response fields: `greenRanges` (target/min/max per metric, null if goals
+are incomplete) and optimal-only `optimization` (outcome, before/after states,
+improvedMetrics, enteredGreen, leftGreen, calorie headroom, scores/penalties,
+policy, candidate count and practical validation). State keys use the same macro
+names as nutrition. `improvedMetrics` means an initially low metric increased;
+`enteredGreen` identifies deficits actually resolved. `targetCaloriesKcal` remains
+the central remaining/explicit target for client compatibility; drink nutrition
+reports the selected portion, and `optimization.maxAdditionalCaloriesKcal`
+reports the different upper-band budget.
 
 Exact quantities drive primary nutrition. Practical solids and small liquids
 round to whole grams/ml; water rounds to tens of ml. Creatine remains the fixed
 recipe amount whenever there is mix. `practicalNutrition` and
 `practicalProjection` use the independently rounded ingredients and honey.
-Rounding may slightly exceed an exact ceiling; a warning identifies this.
+In `calories`, rounding may slightly exceed the requested amount and produces a
+warning. Optimal candidates are rechecked against the calorie green max after
+rounding, and never selected on the assumption that a warning permits an excess.
 The exact/practical cost is a known base-mixture subtotal: honey, stevia,
 creatine and water prices are not supplied, so `totalPen` is null.
 

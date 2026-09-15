@@ -163,11 +163,14 @@ test("calculator calls the existing Fitia summary service once and never mutates
     expect(data).toMatchObject({
       mode: "fitia_optimal",
       configVersion: "1",
-      status: "recommended",
       targetCaloriesKcal: 500,
       sweetener: { mode: "honey_only" },
-      nutrition: { caloriesKcal: 500 },
+      greenRanges: { caloriesKcal: { target: 2500, min: 2250, max: 2750 } },
+      optimization: { scoringBasis: "practical_quantities", maxAdditionalCaloriesKcal: 750, practicalValidated: true },
     });
+    expect(data.practicalNutrition.caloriesKcal).toBeLessThanOrEqual(750);
+    expect(data.suggestedMealLog).toMatchObject(data.practicalNutrition);
+    expect(data.optimization.score.after).toBeLessThan(data.optimization.score.before);
     expect(reads).toBe(1);
     expect(data.fitia.remaining).toEqual({ caloriesKcal: 500, proteinG: 50, carbsG: 120, fatG: 30 });
     const summary = JSON.parse(

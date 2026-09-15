@@ -1,6 +1,8 @@
 import { validateDate } from "../diary.ts";
 import { CliError } from "../errors.ts";
 import { type DaySummary, difference, type Macros, type MaybeMacros, macroKeys, round } from "../nutrition.ts";
+import { greenRanges, optimizeGainer } from "./optimization.ts";
+import { portionNutrition, roundedMacros as rounded, scaleMacros } from "./portion.ts";
 import {
   baseMixNutrition,
   type GainerConfig,
@@ -17,18 +19,6 @@ export interface GainerInput {
   targetCaloriesKcal?: number;
 }
 
-const scaleMacros = (value: Macros, scale: number): Macros => ({
-  caloriesKcal: value.caloriesKcal * scale,
-  proteinG: value.proteinG * scale,
-  carbsG: value.carbsG * scale,
-  fatG: value.fatG * scale,
-});
-const rounded = (value: Macros): Macros => ({
-  caloriesKcal: round(value.caloriesKcal),
-  proteinG: round(value.proteinG),
-  carbsG: round(value.carbsG),
-  fatG: round(value.fatG),
-});
 function project(day: DaySummary, nutrition: Macros) {
   const consumedAfter: MaybeMacros = { ...day.consumed };
   for (const key of macroKeys)
@@ -58,7 +48,15 @@ export function calculateGainer(input: GainerInput, config: GainerConfig, day: D
       "Use fitia_optimal without a target to budget against Fitia.",
     );
   const resolved = !input.sweetener || input.sweetener === "auto" ? config.sweetenerInventory : input.sweetener;
-  const context = { recipeId: gainerRecipe.id, date: input.date, mode, fitia: day, configUsed: config };
+  const ranges = greenRanges(day.goals);
+  const context = {
+    recipeId: gainerRecipe.id,
+    date: input.date,
+    mode,
+    fitia: day,
+    configUsed: config,
+    greenRanges: ranges,
+  };
   const warnings = [...day.warnings];
   const stop = (status: "needs_input" | "not_recommended" | "sweetener_exceeds_target", reason: string) => ({
     ...context,
@@ -74,6 +72,7 @@ export function calculateGainer(input: GainerInput, config: GainerConfig, day: D
   const configured = gainerRecipe.sweeteners[resolved];
   const honeyG = configured.honeyTablespoons * config.honeyGramsPerTablespoon;
   const sweetNutrition = scaleMacros(config.honeyProfile.per100G, honeyG / 100);
+  const practicalSweetNutrition = scaleMacros(config.honeyProfile.per100G, Math.round(honeyG) / 100);
   const sweetener = {
     mode: resolved,
     ...configured,
@@ -82,11 +81,13 @@ export function calculateGainer(input: GainerInput, config: GainerConfig, day: D
     ...rounded(sweetNutrition),
     honeyProfile: config.honeyProfile,
   };
+  // Preserve the legacy target field; the optimal budget is explicitly reported separately.
   const target = input.targetCaloriesKcal ?? day.remaining.caloriesKcal;
   if (
     target === null ||
     ((mode === "fitia_optimal" || input.targetCaloriesKcal === undefined) && !day.coverage.complete) ||
-    (mode === "fitia_optimal" && macroKeys.some((key) => day.remaining[key] === null))
+    (mode === "fitia_optimal" &&
+      (!ranges || macroKeys.some((key) => day.remaining[key] === null || day.consumed[key] === null)))
   )
     return {
       ...stop(
@@ -95,13 +96,24 @@ export function calculateGainer(input: GainerInput, config: GainerConfig, day: D
       ),
       sweetener,
     };
-  if (target <= 0)
+  const optimization =
+    mode === "fitia_optimal" && ranges
+      ? optimizeGainer(day.consumed as Macros, ranges, sweetNutrition, practicalSweetNutrition)
+      : undefined;
+  const budget = optimization?.maxAdditionalCaloriesKcal ?? target;
+  if (optimization?.outcome === "not_needed")
+    return { ...stop("not_recommended", optimization.reason), targetCaloriesKcal: target, sweetener, optimization };
+  if (budget <= 0)
     return {
-      ...stop("not_recommended", "No quedan calorías dentro del objetivo registrado para este cálculo."),
+      ...stop(
+        "not_recommended",
+        optimization?.reason ?? "No quedan calorías dentro del objetivo registrado para este cálculo.",
+      ),
       targetCaloriesKcal: target,
       sweetener,
+      ...(optimization && { optimization }),
     };
-  if (sweetNutrition.caloriesKcal > target)
+  if (sweetNutrition.caloriesKcal > budget)
     return {
       ...stop(
         "sweetener_exceeds_target",
@@ -109,35 +121,15 @@ export function calculateGainer(input: GainerInput, config: GainerConfig, day: D
       ),
       targetCaloriesKcal: target,
       sweetener,
-      excessCaloriesKcal: round(sweetNutrition.caloriesKcal - target),
+      ...(optimization && { optimization }),
+      excessCaloriesKcal: round(sweetNutrition.caloriesKcal - budget),
       maximumHoneyGWithinTarget:
         config.honeyProfile.per100G.caloriesKcal > 0
-          ? round((target / config.honeyProfile.per100G.caloriesKcal) * 100)
+          ? round((budget / config.honeyProfile.per100G.caloriesKcal) * 100)
           : null,
     };
-  let scale = (target - sweetNutrition.caloriesKcal) / baseMixNutrition.caloriesKcal;
-  const calorieScale = scale;
-  const limitingFactors: string[] = [];
-  if (mode === "fitia_optimal") {
-    // Strict, transparent macro ceilings. Never rebalance ingredients or change configured sweeteners.
-    for (const key of ["fatG", "carbsG"] as const) {
-      const remaining = day.remaining[key]!;
-      if (remaining <= sweetNutrition[key])
-        return {
-          ...stop(
-            "not_recommended",
-            `No queda margen de ${key === "fatG" ? "grasa" : "carbohidratos"} para la mezcla con estos endulzantes.`,
-          ),
-          targetCaloriesKcal: target,
-          sweetener,
-        };
-      const cap = (remaining - sweetNutrition[key]) / baseMixNutrition[key];
-      if (cap < scale) {
-        scale = cap;
-        limitingFactors.push(key);
-      }
-    }
-  }
+  const scale = optimization?.scaleFactor ?? (target - sweetNutrition.caloriesKcal) / baseMixNutrition.caloriesKcal;
+  const limitingFactors = optimization?.outcome === "limited_by_calories" ? ["caloriesKcal"] : [];
   const ingredients = gainerRecipe.ingredients.map((i) => ({
     id: i.id,
     name: i.name,
@@ -147,61 +139,64 @@ export function calculateGainer(input: GainerInput, config: GainerConfig, day: D
   }));
   if (scale <= 0 || !ingredients.some((i) => "practicalG" in i && i.practicalG > 0))
     return {
-      ...stop("not_recommended", "No queda una porción de mezcla medible con una balanza de gramos enteros."),
+      ...stop(
+        "not_recommended",
+        optimization?.reason ?? "No queda una porción de mezcla medible con una balanza de gramos enteros.",
+      ),
       targetCaloriesKcal: target,
       sweetener,
+      ...(optimization && { optimization }),
     };
-  const nutrition = scaleMacros(baseMixNutrition, scale);
-  const practicalNutrition = scaleMacros(config.honeyProfile.per100G, Math.round(honeyG) / 100);
+  const { exact, practical } = portionNutrition(scale, sweetNutrition, practicalSweetNutrition);
   let pen = 0,
     practicalPen = 0;
   for (const i of gainerRecipe.ingredients) {
     pen += (i.amount * scale * i.price.pen) / i.price.packageAmount;
     practicalPen += (Math.round(i.amount * scale) * i.price.pen) / i.price.packageAmount;
-    if (i.nutrition)
-      for (const key of macroKeys)
-        practicalNutrition[key] += (i.nutrition[key] * Math.round(i.amount * scale)) / i.amount;
   }
-  for (const key of macroKeys) nutrition[key] += sweetNutrition[key];
-  const exact = rounded(nutrition),
-    practical = rounded(practicalNutrition);
-  const reduced = scale < calorieScale - 1e-12;
   const projection = project(day, exact),
     practicalProjection = project(day, practical);
   if (honeyG > 0 && config.honeyProfile.source === "standard_reference")
     warnings.push("La miel usa una referencia estándar, no la etiqueta de tu producto.");
-  if (day.remaining.proteinG !== null && day.remaining.proteinG > exact.proteinG)
+  if (
+    optimization
+      ? optimization.after.proteinG === "low"
+      : day.remaining.proteinG !== null && day.remaining.proteinG > exact.proteinG
+  )
     warnings.push("El batido no cubre toda la proteína pendiente; no es un suplemento específicamente proteico.");
   if (input.targetCaloriesKcal !== undefined && !day.coverage.complete)
     warnings.push("Cálculo por objetivo explícito; la proyección de Fitia puede estar incompleta.");
   if (
+    mode === "calories" &&
     macroKeys.some(
       (key) => key !== "proteinG" && projection.remainingAfter[key] !== null && projection.remainingAfter[key]! < -0.01,
     )
   )
     warnings.push("El objetivo explícito/calórico excede algún objetivo de Fitia; revisa la proyección.");
-  if (
-    practical.caloriesKcal > target + 0.01 ||
-    (mode === "fitia_optimal" &&
-      (practical.fatG > day.remaining.fatG! + 0.01 || practical.carbsG > day.remaining.carbsG! + 0.01))
-  )
+  if (mode === "calories" && practical.caloriesKcal > target + 0.01)
     warnings.push(
       "El redondeo doméstico supera ligeramente un límite; registra la nutrición práctica si preparas las cantidades enteras.",
     );
-  const status = mode === "fitia_optimal" && !reduced ? "recommended" : "acceptable";
+  if (optimization?.leftGreen.length)
+    warnings.push(
+      `El compromiso saca del rango verde: ${optimization.leftGreen.join(", ")}. Revisa la proyección práctica.`,
+    );
+  if (optimization && macroKeys.some((key) => optimization.after[key] === "high"))
+    warnings.push(
+      "Quedan macros por encima del rango verde; el resultado incluye su penalización y no intenta aumentarlos como objetivo.",
+    );
+  const status = optimization?.outcome === "all_green" ? "recommended" : "acceptable";
   return {
     ...context,
     status,
-    reason: reduced
-      ? "Porción reducida para respetar la grasa y los carbohidratos restantes, manteniendo la receta original."
-      : mode === "fitia_optimal"
-        ? "La porción cabe en las calorías, grasas y carbohidratos restantes de Fitia."
-        : "Porción calculada para el objetivo calórico indicado; revisa el impacto en los macros.",
+    reason:
+      optimization?.reason ?? "Porción calculada para el objetivo calórico indicado; revisa el impacto en los macros.",
+    ...(optimization && { optimization }),
     targetCaloriesKcal: target,
     sweetener,
     baseMix: {
       scaleFactor: scale,
-      availableCaloriesKcal: round(target - sweetNutrition.caloriesKcal),
+      availableCaloriesKcal: round(budget - sweetNutrition.caloriesKcal),
       caloriesKcal: round(baseMixNutrition.caloriesKcal * scale),
       limitingFactors,
     },
