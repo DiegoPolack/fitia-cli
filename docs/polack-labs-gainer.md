@@ -83,6 +83,85 @@ Stevia and creatine contribute zero kcal/macros in this model.
 
 ## Tools
 
+### Night serving and carryover
+
+After optimal batch sizing, `servingStrategy` is `single_serving` through the
+saved `maxNightCaloriesKcal` (default 750), including the 700–750 band. Above it,
+`split_next_morning` evaluates whole percentages of the practical blended batch.
+It prefers the fraction nearest `preferredNightCaloriesKcal` (default 700),
+reserving at least 100 kcal for morning where feasible. A larger night portion
+may be chosen if another low metric enters green without making another metric
+high and the remainder stays substantial. The maximum always applies. Around a
+1400 kcal batch this can approach half; very large batches still respect the
+night cap, so morning may be larger. There is no separate morning limit yet.
+
+New split fields are `fullBatch`, `nightPortion`, `morningCarryover`,
+`nightProjection`, `nightOptimization`, `servingReason`, `servingPolicy`,
+`carryoverDraft`, `carryoverId`, `nightMealLog`, `morningCarryoverMealLog`,
+`preparation` and `projectionScope`. Fractions refer to the weight of the fully
+blended finished batch, not a final volume inferred from water. All ingredient
+weighing remains in whole units. Portion macros are practical batch totals times
+the chosen fraction; the morning remainder is subtraction rounded to six decimals,
+so the two portions conserve the batch. Creatine is divided with the mixture.
+
+Legacy `optimization.before/after/outcome`, `maxAdditionalCaloriesKcal` and full
+batch nutrition/projections retain their meaning. For a split these are hypothetical
+whole-batch results on the source day; use `nightProjection` for tonight.
+`suggestedMealLog` safely aliases **only nightMealLog**, and `exactMealLog` is null
+for a split. Both separate log payloads use normal `fitia-meal-log`, independent
+preview/confirmation and stable keys. Their suggested meal slots are dinner and
+breakfast. No food or metadata is written by calculation. Calories mode does not
+split or resize its explicit target.
+
+Migration `0003_groovy_madame_masque.sql` adds `fitia_gainer_carryover`, isolated
+by authenticated Clerk identity and immutable batch hash. It stores source/target
+dates, canonical recipe/config snapshot, pending/consumed/cancelled status, version
+and an optional verified diary reference. Night configuration fields use validated
+defaults for existing JSON preferences; no historical settings need rewriting.
+The saved snapshot is independent of subsequent preference changes.
+
+`fitia-gainer-carryover-get({date})` reads records **targeting** that date and their
+verified Fitia/planning context. `fitia-gainer-carryover-update` is one mutation
+tool with a strict object input:
+
+- Save: `{action:"save", draft:carryoverDraft, confirm:false, expectedVersion?}`.
+  Draft contains `sourceDate`, `recipeId`, `scaleFactor`, concrete `sweetener`,
+  `nightPercent` and `configVersion`. The server reconstructs the canonical batch;
+  it does not accept client-supplied nutrition. A changed config version requires
+  a fresh calculation. Preview shows the exact persistent record; approve before
+  `confirm:true` using the returned version (zero on initial creation).
+- Consume/cancel: `{action:"consumed"|"cancelled", carryoverId, confirm:false,
+  expectedVersion?, consumedEntry?:{meal,itemId}}`. The reference is allowed only
+  for consumed. Consumption requires a verified eaten quick entry on targetDate
+  matching the saved remainder. Cancellation never deletes a Fitia entry and is
+  rejected if its tracked entry is already registered.
+
+Mutations reuse write scopes, the kill switch, durable locks, encrypted pre-write
+audit, optimistic versions and readback. Retries return the existing immutable
+batch/state. Saving it again cannot reopen a cancelled record. There is no automatic
+save/consume/cancel, nor any automatic food logging. Explicit confirmation follows
+the same agent approval contract as the existing config mutation.
+
+For optimal calculations with carryover, `carryover` distinguishes
+`normalConsumed`, `recordedNutrition`, `plannedNutrition`, `optimizationConsumed`
+and each record's `effectiveStatus`. The real `fitia` summary remains unchanged.
+Only pending portions **not** verified in Fitia are added to the planning budget.
+Already registered portions remain in actual consumption exactly once, even while
+their metadata is still pending. The optimizer never subtracts a carryover to
+pretend today's excess did not occur. Existing excess handling still applies.
+
+Automatic recognition uses the stable morning log key and the existing exact
+quick-entry ID algorithm. Manually logged portions with another key require an
+explicit consumedEntry reference and preview/confirmation; names/approximate
+totals are never guessed. If a consumed entry disappears or changes, calculation
+fails with a reconciliation error. Summary/entry reads must have matching update
+times. Partial consumption or moving the remainder beyond targetDate is not yet
+modeled; reconcile explicitly instead of declaring the whole remainder consumed.
+
+With the supplied approximate pre-drink 14 September fixture, the practical batch
+is 1034.13 kcal: 68% / 703.2084 kcal at night and 32% / 330.9216 kcal the next morning.
+This is a synthetic regression example, not a modification of the real diary.
+
 All inputs are strict objects. No tool accepts a user ID.
 
 - `fitia-gainer-calculate`: `{date, mode?, sweetener?, targetCaloriesKcal?}`.
@@ -99,6 +178,9 @@ All inputs are strict objects. No tool accepts a user ID.
   before/after and version without writing. After explicit approval, confirm
   the same patch with that `expectedVersion`. Conflicts require a new preview.
   Requires `fitia:write` even for previews, matching the other write tools.
+
+  Night fields: `preferredNightCaloriesKcal` and `maxNightCaloriesKcal` (1–20000),
+  with preferred ≤ maximum after merging the patch into current preferences.
 
 ```json
 {"date":"2026-09-13","mode":"fitia_optimal","sweetener":"auto"}

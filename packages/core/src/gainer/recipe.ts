@@ -14,6 +14,8 @@ export interface GainerConfig {
   defaultMode: GainerMode;
   honeyGramsPerTablespoon: number;
   honeyProfile: HoneyProfile;
+  preferredNightCaloriesKcal: number;
+  maxNightCaloriesKcal: number;
 }
 
 export interface GainerIngredient {
@@ -121,6 +123,8 @@ export function defaultGainerConfig(): GainerConfig {
     sweetenerInventory: "unknown",
     defaultMode: "fitia_optimal",
     honeyGramsPerTablespoon: 20,
+    preferredNightCaloriesKcal: 700,
+    maxNightCaloriesKcal: 750,
     honeyProfile: {
       source: "standard_reference",
       label: "Generic honey reference; replace with the actual product label",

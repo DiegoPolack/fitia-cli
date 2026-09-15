@@ -38,7 +38,7 @@ test("the built MCP server negotiates stdio and declares its safety surface", as
   expect(responses[0].result.serverInfo).toEqual({ name: "fitia", version: VERSION });
   const tools = responses[1].result.tools;
   const mcpOperations = Object.values(operations).filter((operation) => "mcpName" in operation);
-  expect(tools).toHaveLength(mcpOperations.length + 3);
+  expect(tools).toHaveLength(mcpOperations.length + 5);
   for (const operation of mcpOperations) {
     const tool = tools.find((candidate: any) => candidate.name === operation.mcpName);
     expect(tool.description.startsWith(operation.description)).toBe(true);

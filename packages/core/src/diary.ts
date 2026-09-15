@@ -40,6 +40,16 @@ export type RefreshInput = { date: string; dryRun: boolean; yes: boolean };
 export type RemoveInput = RefreshInput & { meal: MealName; itemId: string };
 export { stateDirectory } from "./safe-write.ts";
 
+export function quickEntryIdentity(accountId: string, date: string, meal: string, idempotencyKey: string) {
+  const hash = createHash("sha256")
+    .update(JSON.stringify([accountId, date, meal, idempotencyKey]))
+    .digest("hex");
+  return {
+    hash,
+    id: `${hash.slice(0, 8)}-${hash.slice(8, 12)}-5${hash.slice(13, 16)}-a${hash.slice(17, 20)}-${hash.slice(20, 32)}`,
+  };
+}
+
 export function validateDate(date: string) {
   if (
     !/^\d{4}-\d{2}-\d{2}$/.test(date) ||
@@ -321,10 +331,7 @@ export class DiaryClient {
       `auto:${createHash("sha256")
         .update(JSON.stringify([input.date, input.meal, entry, input.occurrence ?? 1]))
         .digest("hex")}`;
-    const hash = createHash("sha256")
-      .update(JSON.stringify([accountId, input.date, input.meal, idempotencyKey]))
-      .digest("hex");
-    const id = `${hash.slice(0, 8)}-${hash.slice(8, 12)}-5${hash.slice(13, 16)}-a${hash.slice(17, 20)}-${hash.slice(20, 32)}`;
+    const { hash, id } = quickEntryIdentity(accountId, input.date, input.meal, idempotencyKey);
     const receipt = {
       status: "preview",
       date: input.date,

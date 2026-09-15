@@ -170,7 +170,12 @@ test.each(["honey_only", "both", "none", "stevia_only"] as const)(
     for (const key of macroKeys) {
       sums[key] += (result.sweetener.practicalHoneyG * result.sweetener.honeyProfile.per100G[key]) / 100;
       expect(result.practicalNutrition[key]).toBe(round(sums[key]));
-      expect(result.suggestedMealLog[key]).toBe(result.practicalNutrition[key]);
+      if ("nightPortion" in result) {
+        expect(result.suggestedMealLog[key]).toBe(result.nightPortion.nutrition[key]);
+        expect(round(result.nightMealLog[key] + result.morningCarryoverMealLog[key])).toBe(
+          result.practicalNutrition[key],
+        );
+      } else expect(result.suggestedMealLog[key]).toBe(result.practicalNutrition[key]);
     }
     expect(result.water.practicalMl % 10).toBe(0);
     expect(result.creatineG).toBe(5);

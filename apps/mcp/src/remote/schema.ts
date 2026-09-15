@@ -1,5 +1,48 @@
 import { sql } from "drizzle-orm";
-import { bigint, check, customType, index, jsonb, pgTable, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
+import {
+  bigint,
+  check,
+  customType,
+  index,
+  jsonb,
+  pgTable,
+  primaryKey,
+  text,
+  timestamp,
+  uniqueIndex,
+} from "drizzle-orm/pg-core";
+
+export const fitiaGainerCarryover = pgTable(
+  "fitia_gainer_carryover",
+  {
+    clerkUserId: text("clerk_user_id").notNull(),
+    id: text("id").notNull(),
+    sourceDate: text("source_date").notNull(),
+    targetDate: text("target_date").notNull(),
+    definition: jsonb("definition").notNull(),
+    status: text("status").notNull().default("pending"),
+    version: bigint("version", { mode: "number" }).notNull().default(1),
+    consumedMeal: text("consumed_meal"),
+    consumedItemId: text("consumed_item_id"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.clerkUserId, table.id] }),
+    index("fitia_gainer_carryover_target_idx").on(table.clerkUserId, table.targetDate),
+    uniqueIndex("fitia_gainer_carryover_entry_idx").on(
+      table.clerkUserId,
+      table.targetDate,
+      table.consumedMeal,
+      table.consumedItemId,
+    ),
+    check("fitia_gainer_carryover_status", sql`${table.status} IN ('pending','consumed','cancelled')`),
+    check(
+      "fitia_gainer_carryover_entry",
+      sql`(${table.status} = 'consumed' AND ${table.consumedMeal} IS NOT NULL AND ${table.consumedItemId} IS NOT NULL) OR (${table.status} <> 'consumed' AND ${table.consumedMeal} IS NULL AND ${table.consumedItemId} IS NULL)`,
+    ),
+  ],
+);
 
 export const fitiaGainerConfig = pgTable("fitia_gainer_config", {
   clerkUserId: text("clerk_user_id").primaryKey(),

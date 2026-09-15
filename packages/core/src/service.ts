@@ -19,7 +19,7 @@ export interface FitiaOperations {
     language?: string,
     limit?: number,
   ) => Effect.Effect<unknown, CliError>;
-  readonly meal: (date: string) => Effect.Effect<unknown, CliError>;
+  readonly meal: (date: string) => Effect.Effect<Awaited<ReturnType<DiaryClient["get"]>>, CliError>;
   readonly summary: (date: string) => Effect.Effect<DaySummary, CliError>;
   readonly suggest: (input: SuggestInput) => Effect.Effect<unknown, CliError>;
   readonly log: (input: LogInput) => Effect.Effect<unknown, CliError>;

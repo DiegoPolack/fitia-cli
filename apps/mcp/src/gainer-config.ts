@@ -12,6 +12,8 @@ export const gainerConfigPatch = z.strictObject({
   sweetenerInventory: z.enum(["unknown", ...sweetenerModes]).optional(),
   defaultMode: z.enum(["calories", "fitia_optimal"]).optional(),
   honeyGramsPerTablespoon: z.number().min(1).max(100).optional(),
+  preferredNightCaloriesKcal: z.number().min(1).max(20000).optional(),
+  maxNightCaloriesKcal: z.number().min(1).max(20000).optional(),
   honeyProfile: z
     .strictObject({
       source: z.enum(["standard_reference", "product_label"]),
@@ -23,7 +25,14 @@ export const gainerConfigPatch = z.strictObject({
 export type GainerConfigPatch = z.infer<typeof gainerConfigPatch>;
 export function parseGainerConfig(value: unknown): GainerConfig {
   // Validate stored overrides as strictly as tool input. Never hide corruption behind defaults.
-  return { ...defaultGainerConfig(), ...gainerConfigPatch.parse(value) };
+  const config = { ...defaultGainerConfig(), ...gainerConfigPatch.parse(value) };
+  if (config.preferredNightCaloriesKcal > config.maxNightCaloriesKcal)
+    throw new CliError(
+      "INVALID_NIGHT_LIMITS",
+      "Preferred night calories cannot exceed the night maximum.",
+      "Update both limits together if necessary.",
+    );
+  return config;
 }
 export interface GainerConfigSnapshot {
   config: GainerConfig;

@@ -11,6 +11,7 @@ import { marked } from "marked";
 import { createServer } from "../server.ts";
 import { clerkTokenVerifier, clerkUserFrom } from "./auth.ts";
 import { importEncryptionKey, randomCode } from "./crypto.ts";
+import { GainerCarryoverRepository } from "./gainer-carryover.ts";
 import { GainerConfigRepository } from "./gainer-config.ts";
 import { remoteWriteJournal } from "./journal.ts";
 import landing from "./landing.md";
@@ -385,6 +386,11 @@ export function createRemoteApp(env: RemoteEnv) {
         resourceMetadataUrl,
         writeJournal,
         gainerConfig: new GainerConfigRepository({ databaseUrl: env.DATABASE_URL, clerkUserId, journal: writeJournal }),
+        gainerCarryover: new GainerCarryoverRepository({
+          databaseUrl: env.DATABASE_URL,
+          clerkUserId,
+          journal: writeJournal,
+        }),
         startLink: async () => {
           const code = randomCode();
           await repository.createLinkCode(clerkUserId, code);

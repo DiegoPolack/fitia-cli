@@ -11,6 +11,7 @@ import {
   type SweetenerMode,
   sweetenerModes,
 } from "./recipe.ts";
+import { type CarryoverDraft, makeCarryoverPlan, nightPercentage, servingPolicy } from "./serving.ts";
 
 export interface GainerInput {
   date: string;
@@ -26,7 +27,7 @@ function project(day: DaySummary, nutrition: Macros) {
   return { consumedAfter, remainingAfter: difference(day.remaining, nutrition) };
 }
 
-export function calculateGainer(input: GainerInput, config: GainerConfig, day: DaySummary) {
+function calculateBatch(input: GainerInput, config: GainerConfig, day: DaySummary) {
   validateDate(input.date);
   if (day.date !== input.date)
     throw new CliError(
@@ -232,5 +233,64 @@ export function calculateGainer(input: GainerInput, config: GainerConfig, day: D
       confirm: false,
     },
     mealLogBasis: "suggestedMealLog uses practical quantities; select the meal and confirm only after user approval.",
+  };
+}
+
+export function calculateGainer(input: GainerInput, config: GainerConfig, day: DaySummary) {
+  const result = calculateBatch(input, config, day);
+  if (!("practicalNutrition" in result)) return result;
+  if (result.mode !== "fitia_optimal" || result.practicalNutrition.caloriesKcal <= config.maxNightCaloriesKcal)
+    return { ...result, servingStrategy: "single_serving" as const };
+  const draft: CarryoverDraft = {
+    sourceDate: input.date,
+    recipeId: gainerRecipe.id,
+    scaleFactor: result.baseMix.scaleFactor,
+    sweetener: result.sweetener.mode,
+    nightPercent: nightPercentage(result.practicalNutrition, config, day),
+  };
+  const plan = makeCarryoverPlan(draft, config);
+  const nightProjection = project(day, plan.nightPortion.nutrition);
+  const nightStates = Object.fromEntries(
+    macroKeys.map((key) => {
+      const value = nightProjection.consumedAfter[key],
+        range = result.greenRanges?.[key];
+      return [
+        key,
+        value === null || !range ? "unknown" : value < range.min ? "low" : value > range.max ? "high" : "green",
+      ];
+    }),
+  );
+  return {
+    ...result,
+    servingStrategy: "split_next_morning" as const,
+    fullBatch: { ...plan.fullBatch, nutrition: result.nutrition, cost: result.cost },
+    nightPortion: plan.nightPortion,
+    morningCarryover: plan.morningCarryover,
+    nightProjection,
+    nightOptimization: { after: nightStates },
+    servingReason:
+      "El lote óptimo supera el límite nocturno. Toma la fracción indicada esta noche y reserva el resto para mañana; el resultado del lote completo no se atribuye íntegramente a hoy.",
+    nightMealLog: plan.nightMealLog,
+    morningCarryoverMealLog: plan.morningCarryoverMealLog,
+    suggestedMealLog: plan.nightMealLog,
+    exactMealLog: null,
+    carryoverDraft: draft,
+    carryoverId: plan.id,
+    carryoverPersistence: "not_saved" as const,
+    servingPolicy: {
+      ...servingPolicy,
+      preferredNightCaloriesKcal: config.preferredNightCaloriesKcal,
+      maxNightCaloriesKcal: config.maxNightCaloriesKcal,
+    },
+    projectionScope:
+      "optimization.after and legacy projections describe the full batch hypothetically on the source day; nightProjection describes only tonight.",
+    preparation: [
+      "Prepara el lote completo con los ingredientes prácticos indicados.",
+      "Licúa completamente y pesa el lote terminado; divide por los porcentajes indicados después de mezclar.",
+      "Consume la fracción nocturna y refrigera de inmediato el resto para la mañana siguiente.",
+      "La creatina ya está en el lote y se reparte entre ambas tomas; no añadas otra dosis por porción.",
+    ],
+    mealLogBasis:
+      "suggestedMealLog and nightMealLog contain only the night fraction. Save the carryover explicitly, then log each fraction on its actual consumption date using its separate payload and preview/confirmation.",
   };
 }

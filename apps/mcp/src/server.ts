@@ -1,5 +1,8 @@
+import { validateDate } from "@fitia/core/diary";
 import { calculateGainer } from "@fitia/core/gainer/calculator";
+import { carryoverContext, planningDay, recordedCarryover } from "@fitia/core/gainer/carryover";
 import { sweetenerModes } from "@fitia/core/gainer/recipe";
+import { makeCarryoverPlan } from "@fitia/core/gainer/serving";
 import {
   CliError,
   Fitia,
@@ -14,6 +17,7 @@ import { McpServer } from "@modelcontextprotocol/server";
 import { Effect, Result } from "effect";
 import * as z from "zod/v4";
 import gainerSkill from "../../../skills/fitia-gainer/SKILL.md";
+import { type CarryoverStore, carryoverUpdateSchema, unconfiguredCarryoverStore } from "./gainer-carryover.ts";
 import { type GainerConfigStore, gainerConfigPatch, unconfiguredGainerStore } from "./gainer-config.ts";
 
 const date = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Use YYYY-MM-DD");
@@ -39,6 +43,7 @@ type ServerOptions = {
   readonly canWrite?: boolean;
   readonly writeJournal?: WriteJournal;
   readonly gainerConfig?: GainerConfigStore;
+  readonly gainerCarryover?: CarryoverStore;
   readonly resourceMetadataUrl?: string;
   readonly startLink?: () => Promise<{ readonly code: string; readonly expiresInSeconds: number }>;
 };
@@ -322,6 +327,7 @@ export function createServer(options: ServerOptions = {}) {
   );
 
   const configStore = options.gainerConfig ?? unconfiguredGainerStore;
+  const carryoverStore = options.gainerCarryover ?? unconfiguredCarryoverStore;
   const configEffect = <A>(run: () => Promise<A>) =>
     Effect.tryPromise({
       try: run,
@@ -330,7 +336,7 @@ export function createServer(options: ServerOptions = {}) {
           ? error
           : new CliError(
               "GAINER_CONFIG_ERROR",
-              "Gainer configuration could not be read or updated.",
+              "Gainer configuration or carryover could not be read or updated.",
               "Check the database/migration and configuration; no fallback was applied.",
               5,
             ),
@@ -365,10 +371,86 @@ export function createServer(options: ServerOptions = {}) {
       write(() => configEffect(() => configStore.update(patch, confirm, expectedVersion))),
   );
   server.registerTool(
+    "fitia-gainer-carryover-get",
+    {
+      description:
+        "Read saved carryovers targeting this date, verifying registered portions against Fitia. Pending unregistered nutrition is planned, never written to Fitia. No metadata is changed by this read.",
+      inputSchema: z.strictObject({ date }),
+      annotations: { readOnlyHint: true },
+      _meta: readSecurity,
+    },
+    ({ date }) =>
+      read((fitia) =>
+        Effect.gen(function* () {
+          const records = yield* configEffect(() => carryoverStore.list(date));
+          const summary = yield* Effect.result(fitia.summary(date));
+          if (Result.isFailure(summary)) {
+            if (summary.failure.code === "DIARY_NOT_FOUND")
+              return {
+                date,
+                items: records,
+                verification: "diary_not_found",
+                reason:
+                  "Saved carryovers are available, but Fitia has no accessible diary for this date yet. No consumed totals were inferred.",
+              };
+            return yield* Effect.fail(summary.failure);
+          }
+          const day = summary.success;
+          const diary = records.some((r) => r.status !== "cancelled") ? yield* fitia.meal(date) : null;
+          return yield* configEffect(async () => ({
+            date,
+            ...carryoverContext(records, day, diary, options.trustedAccountId ?? ""),
+          }));
+        }),
+      ),
+  );
+  server.registerTool(
+    "fitia-gainer-carryover-update",
+    {
+      description:
+        "Explicitly save a prepared split batch, mark its verified Fitia morning entry consumed, or cancel an unconsumed remainder. Preview confirm=false, then obtain approval and submit the same operation with expectedVersion and confirm=true. Never logs food. Save uses the calculator's carryoverDraft including configVersion. Consumed may identify a manually logged exact matching entry via consumedEntry; otherwise the stable log key is verified.",
+      inputSchema: carryoverUpdateSchema,
+      annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true },
+      _meta: writeSecurity,
+    },
+    (input) =>
+      write((fitia) =>
+        configEffect(async () => {
+          const verify = async (
+            record: Parameters<typeof recordedCarryover>[0],
+            reference?: Parameters<typeof recordedCarryover>[3],
+          ) => {
+            const diary = await Effect.runPromise(Effect.result(fitia.meal(record.targetDate)));
+            if (Result.isFailure(diary)) {
+              if (diary.failure.code === "DIARY_NOT_FOUND") return null;
+              throw diary.failure;
+            }
+            return recordedCarryover(record, diary.success, options.trustedAccountId ?? "", reference);
+          };
+          if (input.action === "save") {
+            const saved = await configStore.get();
+            if (input.draft!.configVersion !== saved.version)
+              throw new CliError(
+                "CONFIG_VERSION_CONFLICT",
+                "The split draft uses a different configuration version.",
+                "Calculate and preview again with the current configuration.",
+              );
+            const { configVersion: _, ...draft } = input.draft!;
+            const plan = makeCarryoverPlan(draft, saved.config);
+            return carryoverStore.update(
+              { action: "save", plan, confirm: input.confirm, expectedVersion: input.expectedVersion },
+              verify,
+            );
+          }
+          return carryoverStore.update({ ...input, action: input.action, carryoverId: input.carryoverId! }, verify);
+        }),
+      ),
+  );
+  server.registerTool(
     "fitia-gainer-calculate",
     {
       description:
-        "Calculate Polack Labs Mass Gainer v1 from the same live summary as fitia-day-summary. For batido/gainer decisions use fitia_optimal: optimizes all four metrics against this MCP's 90-110% green-range convention, including no drink; scores practical whole-unit quantities. Use calories for an explicit kcal amount. Default sweetener=auto and saved mode. Never reconstruct the recipe from memory. Read-only; returns exact/practical amounts, macros, cost, greenRanges, optimization reasons, projections and meal-log payloads.",
+        "Calculate Polack Labs Mass Gainer v1 from the same live summary as fitia-day-summary. fitia_optimal optimizes all four 90-110% green ranges, including no drink; budgets pending carryover once and splits large batches between tonight and tomorrow using saved night limits. Use calories for explicit kcal. Default sweetener=auto and saved mode. Never reconstruct the recipe. Read-only: returns fullBatch, servingStrategy, separate night/morning log payloads, carryoverDraft, practical amounts, macros, cost, greenRanges and optimization. Save carryover only through an explicitly approved mutation; never log the whole split batch on one day.",
       inputSchema: z.strictObject({
         date,
         mode: z.enum(["calories", "fitia_optimal"]).optional(),
@@ -382,9 +464,34 @@ export function createServer(options: ServerOptions = {}) {
       read((fitia) =>
         Effect.gen(function* () {
           const saved = yield* configEffect(() => configStore.get());
+          yield* configEffect(async () => validateDate(input.date));
+          const records = yield* configEffect(() => carryoverStore.list(input.date));
           const day = yield* fitia.summary(input.date);
+          const diary = records.some((r) => r.status !== "cancelled") ? yield* fitia.meal(input.date) : null;
           return yield* Effect.try({
-            try: () => ({ ...calculateGainer(input, saved.config, day), configVersion: saved.version }),
+            try: () => {
+              const carryover = carryoverContext(records, day, diary, options.trustedAccountId ?? "");
+              const optimal = (input.mode ?? saved.config.defaultMode) === "fitia_optimal";
+              const plannedDay = optimal ? planningDay(day, carryover.plannedNutrition) : day;
+              const result = calculateGainer(input, saved.config, plannedDay);
+              return {
+                ...result,
+                fitia: day,
+                targetCaloriesKcal: input.targetCaloriesKcal ?? day.remaining.caloriesKcal,
+                configVersion: saved.version,
+                ...(records.length
+                  ? {
+                      carryover,
+                      planningBasis: optimal
+                        ? "Optimization and projections include unregistered pending carryover; fitia remains the unmodified recorded summary."
+                        : "Explicit calories mode keeps its requested size; carryover is shown as context only and is not added to its projections.",
+                    }
+                  : {}),
+                ...("carryoverDraft" in result
+                  ? { carryoverDraft: { ...result.carryoverDraft, configVersion: saved.version } }
+                  : {}),
+              };
+            },
             catch: (error) =>
               error instanceof CliError
                 ? error

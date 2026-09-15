@@ -1,5 +1,7 @@
 import { expect, test } from "bun:test";
+import { quickEntryIdentity } from "@fitia/core/diary";
 import { defaultGainerConfig } from "@fitia/core/gainer/recipe";
+import { makeCarryoverPlan } from "@fitia/core/gainer/serving";
 import { InMemoryTransport } from "../apps/mcp/node_modules/@modelcontextprotocol/server";
 import { createServer } from "../apps/mcp/src/server.ts";
 
@@ -40,7 +42,178 @@ test("MCP exposes bundled skill in initialization/resource and strict gainer sch
     expect(update.inputSchema.properties.confirm.default).toBe(false);
     expect(update.inputSchema.additionalProperties).toBe(false);
     expect(update._meta.securitySchemes[0].scopes).toEqual(["fitia:read", "fitia:write"]);
+    const carryoverUpdate = tools.find((t: any) => t.name === "fitia-gainer-carryover-update");
+    expect(carryoverUpdate.inputSchema.type).toBe("object");
+    expect(carryoverUpdate.inputSchema.additionalProperties).toBe(false);
+    expect(carryoverUpdate.inputSchema.properties.confirm.default).toBe(false);
+    expect(carryoverUpdate._meta.securitySchemes[0].scopes).toEqual(["fitia:read", "fitia:write"]);
   } finally {
+    await rpc.close();
+  }
+});
+
+test("carryover mutation scope and input checks run before the repository", async () => {
+  let mutations = 0;
+  const rpc = await client({
+    canWrite: false,
+    gainerCarryover: {
+      async list() {
+        return [];
+      },
+      async update() {
+        mutations++;
+        return {};
+      },
+    },
+  });
+  try {
+    for (const confirm of [false, true]) {
+      const response = await rpc.request("tools/call", {
+        name: "fitia-gainer-carryover-update",
+        arguments: { action: "cancelled", carryoverId: "a".repeat(64), confirm, expectedVersion: "1" },
+      });
+      expect(response.result.isError).toBe(true);
+    }
+    for (const args of [{ date: "2026-09-15", clerkUserId: "other" }, { date: "not-a-date" }]) {
+      const response = await rpc.request("tools/call", { name: "fitia-gainer-carryover-get", arguments: args });
+      expect(response.error !== undefined || response.result?.isError === true).toBe(true);
+    }
+    const invalid = await rpc.request("tools/call", {
+      name: "fitia-gainer-carryover-update",
+      arguments: { action: "save", confirm: false },
+    });
+    expect(invalid.error !== undefined || invalid.result?.isError === true).toBe(true);
+    expect(mutations).toBe(0);
+  } finally {
+    await rpc.close();
+  }
+});
+
+test("MCP split and next-day pending/registered calculations only GET Fitia and never save or log", async () => {
+  const config = { ...defaultGainerConfig(), sweetenerInventory: "honey_only" as const };
+  const plan = makeCarryoverPlan(
+    {
+      sourceDate: "2026-09-14",
+      recipeId: "polack_labs_mass_gainer_v1",
+      scaleFactor: 1.47,
+      sweetener: "honey_only",
+      nightPercent: 68,
+    },
+    config,
+  );
+  const pending = { ...plan, status: "pending" as const, version: "1", consumedEntry: null };
+  let registered = false,
+    requests = 0,
+    writes = 0;
+  const previousFetch = globalThis.fetch;
+  globalThis.fetch = Object.assign(
+    async (url: string | URL | Request, init?: RequestInit) => {
+      expect(String(url)).toStartWith("https://firestore.googleapis.com/");
+      expect(init?.method ?? "GET").toBe("GET");
+      requests++;
+      const source = String(url).endsWith("14-09-2026");
+      const macros = source
+        ? { caloriesKcal: 1983, proteinG: 148, carbsG: 185, fatG: 71 }
+        : registered
+          ? plan.nutrition
+          : { caloriesKcal: 0, proteinG: 0, carbsG: 0, fatG: 0 };
+      const id = source
+        ? "source-eaten"
+        : quickEntryIdentity("test-user", "2026-09-15", "breakfast", plan.morningCarryoverMealLog.idempotencyKey).id;
+      return Response.json({
+        name: String(url).split("/v1/")[1],
+        updateTime: "2026-09-15T12:00:00Z",
+        fields: fields({
+          mealProgress: {
+            targetCalories: 2940,
+            targetProteins: 110,
+            targetCarbs: 400,
+            targetFats: 98,
+            consumedCalories: macros.caloriesKcal,
+            meals: {
+              breakfast: {
+                typeID: 0,
+                mealItems:
+                  source || registered
+                    ? {
+                        [id]: {
+                          type: "2",
+                          name: source ? "source" : plan.morningCarryoverMealLog.name,
+                          isEaten: true,
+                          calories: macros.caloriesKcal,
+                          proteins: macros.proteinG,
+                          carbs: macros.carbsG,
+                          fats: macros.fatG,
+                        },
+                      }
+                    : {},
+              },
+            },
+          },
+        }),
+      });
+    },
+    { preconnect: previousFetch.preconnect },
+  );
+  const token = `e30.${Buffer.from(JSON.stringify({ exp: 4102444800 })).toString("base64url")}.synthetic`;
+  const rpc = await client({
+    token,
+    trustedAccountId: "test-user",
+    canWrite: true,
+    gainerConfig: {
+      async get() {
+        return { config, version: "1", persisted: true };
+      },
+      async update() {
+        writes++;
+        return {};
+      },
+    },
+    gainerCarryover: {
+      async list(date) {
+        return date === "2026-09-15" ? [pending] : [];
+      },
+      async update() {
+        writes++;
+        return {};
+      },
+    },
+  });
+  const calculate = async (date: string) => {
+    const response = await rpc.request("tools/call", {
+      name: "fitia-gainer-calculate",
+      arguments: { date, mode: "fitia_optimal" },
+    });
+    if (response.result.isError) throw new Error(response.result.content[0].text);
+    expect(response.result.isError).not.toBe(true);
+    return JSON.parse(response.result.content[0].text);
+  };
+  try {
+    const source = await calculate("2026-09-14");
+    expect(source.servingStrategy).toBe("split_next_morning");
+    expect(source.carryoverDraft.configVersion).toBe("1");
+    expect(source.suggestedMealLog).toEqual(source.nightMealLog);
+    expect(requests).toBe(1);
+    const tomorrow = await calculate("2026-09-15");
+    expect(tomorrow.fitia.consumed.caloriesKcal).toBe(0);
+    expect(tomorrow.carryover.plannedNutrition).toEqual(plan.nutrition);
+    expect(tomorrow.optimization.maxAdditionalCaloriesKcal).toBeCloseTo(3234 - plan.nutrition.caloriesKcal, 5);
+    registered = true;
+    const consumed = await calculate("2026-09-15");
+    expect(consumed.fitia.consumed).toEqual(plan.nutrition);
+    expect(consumed.carryover.plannedNutrition.caloriesKcal).toBe(0);
+    expect(consumed.carryover.recordedNutrition).toEqual(plan.nutrition);
+    expect(consumed.optimization).toEqual(tomorrow.optimization);
+    expect(writes).toBe(0);
+    expect(requests).toBe(5);
+    const stale = await rpc.request("tools/call", {
+      name: "fitia-gainer-carryover-update",
+      arguments: { action: "save", draft: { ...source.carryoverDraft, configVersion: "0" }, confirm: false },
+    });
+    expect(JSON.parse(stale.result.content[0].text).error.code).toBe("CONFIG_VERSION_CONFLICT");
+    expect(writes).toBe(0);
+  } finally {
+    globalThis.fetch = previousFetch;
     await rpc.close();
   }
 });
@@ -95,6 +268,55 @@ function fields(value: Record<string, unknown>): Record<string, unknown> {
     ]),
   );
 }
+
+test("saved carryover can be retrieved before tomorrow's diary exists, without masking other provider failures", async () => {
+  const plan = makeCarryoverPlan(
+    {
+      sourceDate: "2026-09-14",
+      recipeId: "polack_labs_mass_gainer_v1",
+      scaleFactor: 1.47,
+      sweetener: "honey_only",
+      nightPercent: 68,
+    },
+    defaultGainerConfig(),
+  );
+  const record = { ...plan, status: "pending" as const, version: "1", consumedEntry: null };
+  const previousFetch = globalThis.fetch;
+  let status = 404;
+  globalThis.fetch = Object.assign(async () => new Response(null, { status }), {
+    preconnect: previousFetch.preconnect,
+  });
+  const rpc = await client({
+    token: `e30.${Buffer.from(JSON.stringify({ exp: 4102444800 })).toString("base64url")}.synthetic`,
+    trustedAccountId: "test-user",
+    canWrite: false,
+    gainerCarryover: {
+      async list() {
+        return [record];
+      },
+      async update() {
+        throw new Error("Unexpected mutation");
+      },
+    },
+  });
+  try {
+    const read = () =>
+      rpc.request("tools/call", { name: "fitia-gainer-carryover-get", arguments: { date: "2026-09-15" } });
+    const missing = await read();
+    expect(missing.result.isError).not.toBe(true);
+    expect(JSON.parse(missing.result.content[0].text)).toMatchObject({
+      verification: "diary_not_found",
+      items: [{ id: plan.id, status: "pending" }],
+    });
+    status = 503;
+    const unavailable = await read();
+    expect(unavailable.result.isError).toBe(true);
+    expect(JSON.parse(unavailable.result.content[0].text).error.code).toBe("DIARY_HTTP_ERROR");
+  } finally {
+    globalThis.fetch = previousFetch;
+    await rpc.close();
+  }
+});
 test("calculator calls the existing Fitia summary service once and never mutates the diary", async () => {
   const previousFetch = globalThis.fetch;
   let reads = 0;

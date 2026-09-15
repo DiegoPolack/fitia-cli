@@ -208,7 +208,7 @@ test("read-only grants discover write tools and receive a scope-upgrade challeng
   response = receive();
   await clientTransport.send({ jsonrpc: "2.0", id: 2, method: "tools/list", params: {} });
   const tools = (await response).result.tools;
-  expect(tools).toHaveLength(16);
+  expect(tools).toHaveLength(18);
   expect(tools.find((tool: { name: string }) => tool.name === "fitia-account-link")._meta.securitySchemes).toEqual([
     { type: "oauth2", scopes: ["fitia:read"] },
   ]);

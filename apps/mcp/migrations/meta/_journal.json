@@ -22,6 +22,13 @@
       "when": 1789361286373,
       "tag": "0002_thick_praxagora",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1789488998324,
+      "tag": "0003_groovy_madame_masque",
+      "breakpoints": true
     }
   ]
 }
