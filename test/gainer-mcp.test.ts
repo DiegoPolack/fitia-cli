@@ -251,13 +251,15 @@ test("MCP sizes from normal intake after a verified 61/39 carryover, without cha
   });
   const previousFetch = globalThis.fetch;
   let requests = 0,
-    writes = 0;
+    writes = 0,
+    wholeUnits = false;
   globalThis.fetch = Object.assign(
     async (url: string | URL | Request, init?: RequestInit) => {
       expect(String(url)).toStartWith("https://firestore.googleapis.com/");
       expect(String(url)).toEndWith("16-09-2026");
       expect(init?.method ?? "GET").toBe("GET");
       requests++;
+      const storedNutrition = wholeUnits ? { caloriesKcal: 445, proteinG: 13, carbsG: 75, fatG: 10 } : plan.nutrition;
       return Response.json({
         name: String(url).split("/v1/")[1],
         updateTime: "2026-09-16T20:00:00Z",
@@ -267,8 +269,8 @@ test("MCP sizes from normal intake after a verified 61/39 carryover, without cha
             targetProteins: 110,
             targetCarbs: 270,
             targetFats: 67.6,
-            consumedCalories: normal.caloriesKcal + plan.nutrition.caloriesKcal,
-            meals: { breakfast: { typeID: 0, mealItems: { normal: item(normal), [entryId]: item(plan.nutrition) } } },
+            consumedCalories: normal.caloriesKcal + storedNutrition.caloriesKcal,
+            meals: { breakfast: { typeID: 0, mealItems: { normal: item(normal), [entryId]: item(storedNutrition) } } },
           },
         }),
       });
@@ -328,6 +330,14 @@ test("MCP sizes from normal intake after a verified 61/39 carryover, without cha
     expect(result.configVersion).toBe("9");
     expect(await calculate()).toEqual(result);
     expect(requests).toBe(5);
+    wholeUnits = true;
+    const normalized = await calculate();
+    expect(normalized.planningConsumed).toEqual(normal);
+    expect(normalized.baseMix).toEqual(result.baseMix);
+    expect(normalized.registeredConsumed.caloriesKcal).toBe(1858);
+    expect(normalized.excludedCarryoverFromPlanning).toEqual({ caloriesKcal: 445, proteinG: 13, carbsG: 75, fatG: 10 });
+    expect(normalized.carryover.items[0].verificationNutritionBasis).toBe("whole_units");
+    expect(requests).toBe(7);
     const saved = await read("fitia-gainer-config-get", {});
     expect(saved.config).toEqual(config);
     expect(saved.version).toBe("9");

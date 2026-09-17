@@ -229,3 +229,42 @@ test("unknown registered macros remain unknown; attribution never fabricates com
   expect(result.effectiveProjection.consumedAfter.proteinG).toBeNull();
   expect(result.fitiaProjection.consumedAfter.proteinG).toBeNull();
 });
+
+test("verified whole-unit Fitia entries exclude their actual totals, not the unrounded saved recipe", () => {
+  const r = record(),
+    { day, diary } = fixture([r]);
+  const item = diary.meals[0]!.items[0]!;
+  const actual = emptyMacros();
+  for (const key of macroKeys) {
+    actual[key] = Math.round(r.nutrition[key]);
+    item[key] = actual[key];
+    day.consumed[key] = round(normal[key] + actual[key]);
+  }
+  day.remaining = difference(day.goals, day.consumed);
+  const context = carryoverContext([r], day, diary, "synthetic");
+  expect(actual).toEqual({ caloriesKcal: 445, proteinG: 13, carbsG: 75, fatG: 10 });
+  expect(context.recordedNutrition).toEqual(actual);
+  expect(context.excludedCarryoverFromPlanning).toEqual(actual);
+  expect(context.planningConsumed).toEqual(normal);
+  expect(context.items[0]).toMatchObject({ registeredNutrition: actual, verificationNutritionBasis: "whole_units" });
+  const result = calculateGainer({ date, mode: "fitia_optimal", sweetener: "none" }, config, day, context);
+  expect(result.baseMix).toEqual(calculate([], []).result.baseMix);
+  expect(result.registeredConsumed).toEqual(day.consumed);
+  const consumed = {
+    ...r,
+    status: "consumed" as const,
+    consumedEntry: { meal: "breakfast" as const, itemId: item.id },
+  };
+  expect(carryoverContext([consumed], day, diary, "synthetic").planningConsumed).toEqual(normal);
+
+  item.caloriesKcal = 446;
+  expect(() => carryoverContext([r], day, diary, "synthetic")).toThrow("does not match");
+  item.caloriesKcal = r.nutrition.caloriesKcal;
+  expect(() => carryoverContext([r], day, diary, "synthetic")).toThrow("does not match");
+  item.caloriesKcal = actual.caloriesKcal;
+  item.eaten = false;
+  expect(() => carryoverContext([r], day, diary, "synthetic")).toThrow("does not match");
+  item.eaten = true;
+  item.id = "unrelated-entry-with-the-same-macros";
+  expect(carryoverContext([r], day, diary, "synthetic").excludedCarryoverFromPlanning).toEqual(emptyMacros());
+});

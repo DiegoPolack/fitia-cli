@@ -164,7 +164,8 @@ The real `fitia` summary is unchanged. Every calculator response separates:
 The carryover context retains `recordedNutrition` (all verified portions),
 `plannedNutrition` (unregistered pending portions) and `normalConsumed` (registered
 minus earlier-source exclusions, before adding pending). Its `optimizationConsumed`
-aliases `planningConsumed`. Each verified item reports `excludedFromPlanning`.
+aliases `planningConsumed`. Each verified item reports `excludedFromPlanning`,
+`registeredNutrition` and `verificationNutritionBasis` (`canonical` or `whole_units`).
 Same-day-source portions remain included. A verified earlier-source portion is
 excluded even if its stored metadata is still pending; marking it consumed does not
 subtract it again. Cancelled portions have no planning adjustment. Duplicate IDs
@@ -187,7 +188,12 @@ state, and requires no new migration. `sweetener:none` remains a per-call overri
 Automatic recognition uses the stable morning log key and the existing exact
 quick-entry ID algorithm. Manually logged portions with another key require an
 explicit consumedEntry reference and preview/confirmation; names/approximate
-totals are never guessed. If a consumed entry disappears or changes, calculation
+totals are never guessed. For that exact identity, verification accepts either the
+canonical four totals or **all four independently rounded to whole units**, as
+observed in actual Fitia entries. Mixed rounding and other mismatches still fail.
+Recorded/excluded nutrition always uses the actual verified entry totals, not the
+unrounded recipe, so rounding differences cannot create extra planning credit.
+If a consumed entry disappears or changes outside these representations, calculation
 fails with a reconciliation error. Summary/entry reads must have matching update
 times. Partial consumption or moving the remainder beyond targetDate is not yet
 modeled; reconcile explicitly instead of declaring the whole remainder consumed.

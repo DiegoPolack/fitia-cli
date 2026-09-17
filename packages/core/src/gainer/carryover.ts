@@ -1,6 +1,6 @@
 import { type DiaryClient, type MealName, mealTypes, quickEntryIdentity } from "../diary.ts";
 import { CliError } from "../errors.ts";
-import { type DaySummary, difference, emptyMacros, macroKeys, round } from "../nutrition.ts";
+import { type DaySummary, difference, emptyMacros, type Macros, macroKeys, round } from "../nutrition.ts";
 import type { CarryoverPlan } from "./serving.ts";
 
 export type DiarySnapshot = Awaited<ReturnType<DiaryClient["get"]>>;
@@ -11,7 +11,7 @@ export type CarryoverRecord = CarryoverPlan & {
   consumedEntry: MealReference | null;
 };
 
-export function recordedCarryover(
+function verifiedRegistration(
   record: CarryoverRecord,
   diary: DiarySnapshot,
   accountId: string,
@@ -19,7 +19,7 @@ export function recordedCarryover(
 ) {
   if (diary.date !== record.targetDate)
     throw new CliError("CARRYOVER_DATE_MISMATCH", "Carryover and diary dates differ.", "Read the target date.");
-  const matches: MealReference[] = [];
+  const matches: { reference: MealReference; nutrition: Macros; basis: "canonical" | "whole_units" }[] = [];
   for (const meal of diary.meals) {
     if (!Object.hasOwn(mealTypes, meal.name)) continue;
     const mealName = meal.name as MealName;
@@ -28,17 +28,24 @@ export function recordedCarryover(
       quickEntryIdentity(accountId, record.targetDate, mealName, record.morningCarryoverMealLog.idempotencyKey).id;
     if (reference && reference.meal !== mealName) continue;
     for (const item of meal.items.filter((i) => i.id === id)) {
-      if (
-        item.type !== "2" ||
-        !item.eaten ||
-        macroKeys.some((key) => item[key] === null || Math.abs(item[key]! - record.nutrition[key]) > 1e-6)
-      )
+      const canonical = macroKeys.every(
+        (key) => item[key] !== null && Math.abs(item[key]! - record.nutrition[key]) <= 1e-6,
+      );
+      // Existing Fitia entries can store all four totals rounded to whole units.
+      // Accept only that exact representation for the verified entry identity,
+      // never a loose tolerance, a name match, or individually mixed rounding.
+      const wholeUnits = macroKeys.every((key) => item[key] === Math.round(record.nutrition[key]));
+      if (item.type !== "2" || !item.eaten || (!canonical && !wholeUnits))
         throw new CliError(
           "CARRYOVER_ENTRY_CONFLICT",
           "The identified diary entry does not match the consumed carryover.",
           "Reconcile the exact entry; do not add its nutrition again.",
         );
-      matches.push({ meal: mealName, itemId: item.id });
+      matches.push({
+        reference: { meal: mealName, itemId: item.id },
+        nutrition: Object.fromEntries(macroKeys.map((key) => [key, item[key]])) as Macros,
+        basis: canonical ? "canonical" : "whole_units",
+      });
     }
   }
   if (matches.length > 1)
@@ -48,6 +55,15 @@ export function recordedCarryover(
       "Review the exact diary entries before calculating.",
     );
   return matches[0] ?? null;
+}
+
+export function recordedCarryover(
+  record: CarryoverRecord,
+  diary: DiarySnapshot,
+  accountId: string,
+  reference = record.consumedEntry,
+) {
+  return verifiedRegistration(record, diary, accountId, reference)?.reference ?? null;
 }
 
 export function carryoverContext(
@@ -84,7 +100,8 @@ export function carryoverContext(
         "Carryover requires diary verification.",
         "Read the target day's entries.",
       );
-    const entry = recordedCarryover(record, diary, accountId);
+    const registration = verifiedRegistration(record, diary, accountId);
+    const entry = registration?.reference ?? null;
     if (record.status === "consumed" && !entry)
       throw new CliError(
         "CARRYOVER_LOG_MISSING",
@@ -103,13 +120,16 @@ export function carryoverContext(
     }
     const excludeFromPlanning = entry !== null && record.sourceDate < day.date;
     for (const key of macroKeys) {
-      (entry ? recorded : planned)[key] += record.nutrition[key];
-      if (excludeFromPlanning) excluded[key] += record.nutrition[key];
+      if (registration) recorded[key] += registration.nutrition[key];
+      else planned[key] += record.nutrition[key];
+      if (excludeFromPlanning) excluded[key] += registration!.nutrition[key];
     }
     return {
       ...record,
       effectiveStatus: entry ? ("registered_in_fitia" as const) : ("pending" as const),
       verifiedEntry: entry,
+      registeredNutrition: registration?.nutrition ?? null,
+      verificationNutritionBasis: registration?.basis ?? null,
       excludedFromPlanning: excludeFromPlanning,
     };
   });
