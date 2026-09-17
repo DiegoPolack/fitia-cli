@@ -151,14 +151,15 @@ test("pending carryover is planned once; registered carryover stays in the real 
     d = day(r.targetDate, 3000);
   const pending = carryoverContext([r], d, diary(r, false), "test-account");
   expect(pending.plannedNutrition).toEqual(r.nutrition);
-  expect(planningDay(d, pending.plannedNutrition).consumed).toEqual(r.nutrition);
+  expect(planningDay(d, pending).consumed).toEqual(r.nutrition);
   expect(d.consumed.caloriesKcal).toBe(0);
   d.consumed = { ...r.nutrition };
   const registered = carryoverContext([r], d, diary(r, true), "test-account");
   expect(registered.plannedNutrition.caloriesKcal).toBe(0);
   expect(registered.recordedNutrition).toEqual(r.nutrition);
   expect(registered.normalConsumed.caloriesKcal).toBe(0);
-  expect(registered.optimizationConsumed).toEqual(d.consumed);
+  expect(registered.optimizationConsumed).toEqual(registered.normalConsumed);
+  expect(registered.excludedCarryoverFromPlanning).toEqual(r.nutrition);
   expect(registered.items[0]!.status).toBe("pending");
   expect(registered.items[0]!.effectiveStatus).toBe("registered_in_fitia");
   const entry = recordedCarryover(r, diary(r, true), "test-account")!;

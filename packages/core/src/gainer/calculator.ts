@@ -1,6 +1,15 @@
 import { validateDate } from "../diary.ts";
 import { CliError } from "../errors.ts";
-import { type DaySummary, difference, type Macros, type MaybeMacros, macroKeys, round } from "../nutrition.ts";
+import {
+  type DaySummary,
+  difference,
+  emptyMacros,
+  type Macros,
+  type MaybeMacros,
+  macroKeys,
+  round,
+} from "../nutrition.ts";
+import { type CarryoverContext, carryoverContext, planningDay } from "./carryover.ts";
 import { greenRanges, optimizeGainer } from "./optimization.ts";
 import { portionNutrition, roundedMacros as rounded, scaleMacros } from "./portion.ts";
 import {
@@ -236,7 +245,7 @@ function calculateBatch(input: GainerInput, config: GainerConfig, day: DaySummar
   };
 }
 
-export function calculateGainer(input: GainerInput, config: GainerConfig, day: DaySummary) {
+function calculateServing(input: GainerInput, config: GainerConfig, day: DaySummary) {
   const result = calculateBatch(input, config, day);
   if (!("practicalNutrition" in result)) return result;
   if (result.mode !== "fitia_optimal" || result.practicalNutrition.caloriesKcal <= config.maxNightCaloriesKcal)
@@ -282,8 +291,6 @@ export function calculateGainer(input: GainerInput, config: GainerConfig, day: D
       preferredNightCaloriesKcal: config.preferredNightCaloriesKcal,
       maxNightCaloriesKcal: config.maxNightCaloriesKcal,
     },
-    projectionScope:
-      "optimization.after and legacy projections describe the full batch hypothetically on the source day; nightProjection describes only tonight.",
     preparation: [
       "Prepara el lote completo con los ingredientes prácticos indicados.",
       "Licúa completamente y pesa el lote terminado; divide por los porcentajes indicados después de mezclar.",
@@ -292,5 +299,40 @@ export function calculateGainer(input: GainerInput, config: GainerConfig, day: D
     ],
     mealLogBasis:
       "suggestedMealLog and nightMealLog contain only the night fraction. Save the carryover explicitly, then log each fraction on its actual consumption date using its separate payload and preview/confirmation.",
+  };
+}
+
+// All projections share the same verified attribution. Fitia's original summary
+// is never used as mutable planning state, including on repeated calculations.
+export function calculateGainer(
+  input: GainerInput,
+  config: GainerConfig,
+  day: DaySummary,
+  carryover: CarryoverContext = carryoverContext([], day, null, ""),
+) {
+  const plannedDay = planningDay(day, carryover);
+  const optimal = (input.mode ?? config.defaultMode) === "fitia_optimal";
+  const result = calculateServing(input, config, optimal ? plannedDay : day);
+  const fullNutrition = "practicalNutrition" in result ? result.practicalNutrition : emptyMacros();
+  const todayNutrition = "nightPortion" in result ? result.nightPortion.nutrition : fullNutrition;
+  const sourceDates = [
+    ...new Set(
+      carryover.items.filter((i) => "excludedFromPlanning" in i && i.excludedFromPlanning).map((i) => i.sourceDate),
+    ),
+  ].sort();
+  return {
+    ...result,
+    fitia: day,
+    // Retain the historical field as the real Fitia calorie gap; optimal sizing
+    // uses planningConsumed and optimization.maxAdditionalCaloriesKcal instead.
+    targetCaloriesKcal: input.targetCaloriesKcal ?? day.remaining.caloriesKcal,
+    registeredConsumed: carryover.registeredConsumed,
+    planningConsumed: carryover.planningConsumed,
+    excludedCarryoverFromPlanning: carryover.excludedCarryoverFromPlanning,
+    effectiveProjection: project(plannedDay, fullNutrition),
+    fitiaProjection: project(day, todayNutrition),
+    planningBasis: `Registered Fitia totals include ${carryover.excludedCarryoverFromPlanning.caloriesKcal} kcal from verified carryovers with earlier source dates${sourceDates.length ? ` (${sourceDates.join(", ")})` : ""}. These are excluded from the ${day.date} planning budget. Unregistered pending portions reserve ${carryover.plannedNutrition.caloriesKcal} kcal once. ${optimal ? "fitia_optimal uses planningConsumed." : "calories mode retains its explicit target or real Fitia calorie gap; planningConsumed is context only."}`,
+    projectionScope: `projection/practicalProjection describe the full exact/practical batch on the ${optimal ? "planning" : "registered Fitia"} basis; nightProjection uses that same basis for only tonight. effectiveProjection attributes the full practical batch to its source date using planningConsumed. fitiaProjection adds only today's practical serving (the night fraction for a split) to registeredConsumed; it excludes unregistered pending portions.`,
+    ...(carryover.items.length ? { carryover } : {}),
   };
 }

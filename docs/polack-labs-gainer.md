@@ -104,9 +104,11 @@ weighing remains in whole units. Portion macros are practical batch totals times
 the chosen fraction; the morning remainder is subtraction rounded to six decimals,
 so the two portions conserve the batch. Creatine is divided with the mixture.
 
-Legacy `optimization.before/after/outcome`, `maxAdditionalCaloriesKcal` and full
-batch nutrition/projections retain their meaning. For a split these are hypothetical
-whole-batch results on the source day; use `nightProjection` for tonight.
+Legacy `optimization.before/after/outcome` and `maxAdditionalCaloriesKcal` use the
+corrected planning basis in optimal mode. Full-batch projections remain hypothetical
+whole-batch results on the source day; `nightProjection` uses that same calculation
+basis for the night fraction. Use the explicit projections below to distinguish
+planning from actual Fitia registration.
 `suggestedMealLog` safely aliases **only nightMealLog**, and `exactMealLog` is null
 for a split. Both separate log payloads use normal `fitia-meal-log`, independent
 preview/confirmation and stable keys. Their suggested meal slots are dinner and
@@ -142,13 +144,45 @@ batch/state. Saving it again cannot reopen a cancelled record. There is no autom
 save/consume/cancel, nor any automatic food logging. Explicit confirmation follows
 the same agent approval contract as the existing config mutation.
 
-For optimal calculations with carryover, `carryover` distinguishes
-`normalConsumed`, `recordedNutrition`, `plannedNutrition`, `optimizationConsumed`
-and each record's `effectiveStatus`. The real `fitia` summary remains unchanged.
-Only pending portions **not** verified in Fitia are added to the planning budget.
-Already registered portions remain in actual consumption exactly once, even while
-their metadata is still pending. The optimizer never subtracts a carryover to
-pretend today's excess did not occur. Existing excess handling still applies.
+### Registered consumption versus planning
+
+The real `fitia` summary is unchanged. Every calculator response separates:
+
+- `registeredConsumed`: the real Fitia consumed totals, including morning carryovers.
+- `excludedCarryoverFromPlanning`: only verified registered portions whose
+  `targetDate` equals the calculation date and `sourceDate` is earlier.
+- `planningConsumed`: registered minus that exclusion plus unregistered pending
+  nutrition **once**. This is the exact base used by `fitia_optimal`.
+- `effectiveProjection`: planning consumption plus the full practical new batch,
+  attributed to its source date, including its future morning fraction if split.
+- `fitiaProjection`: real registered totals plus only the practical serving to
+  consume on the calculation date (night fraction for a split). It does not add
+  unregistered pending portions or tomorrow's fraction as if already consumed.
+- `planningBasis`: excluded calories, earlier source dates and pending reservation;
+  `projectionScope` describes the projection bases explicitly.
+
+The carryover context retains `recordedNutrition` (all verified portions),
+`plannedNutrition` (unregistered pending portions) and `normalConsumed` (registered
+minus earlier-source exclusions, before adding pending). Its `optimizationConsumed`
+aliases `planningConsumed`. Each verified item reports `excludedFromPlanning`.
+Same-day-source portions remain included. A verified earlier-source portion is
+excluded even if its stored metadata is still pending; marking it consumed does not
+subtract it again. Cancelled portions have no planning adjustment. Duplicate IDs
+or reused diary receipts fail explicitly rather than granting repeated credit.
+
+The existing `projection` / `practicalProjection` remain full-batch exact/practical
+projections on the calculation basis: planning in optimal mode, real registered
+totals in calories mode. `optimization.after` therefore describes the full practical
+batch, not just tonight's physical consumption. Explicit calorie mode retains its
+requested size (or the real Fitia remaining calories when no target is provided);
+the new planning fields are informational in that mode. No-drink results add zero
+nutrition to either explicit projection; unknown consumed macros remain null.
+
+For example, 1858 registered kcal including 445 verified prior-source kcal gives
+1413 planning kcal when no unregistered portions remain pending. The serving must
+equal a calculation from that normal intake, without the caller subtracting it.
+This attribution changes no Fitia entry, daily target, saved preference or carryover
+state, and requires no new migration. `sweetener:none` remains a per-call override.
 
 Automatic recognition uses the stable morning log key and the existing exact
 quick-entry ID algorithm. Manually logged portions with another key require an

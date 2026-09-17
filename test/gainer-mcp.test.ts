@@ -203,15 +203,136 @@ test("MCP split and next-day pending/registered calculations only GET Fitia and 
     expect(consumed.fitia.consumed).toEqual(plan.nutrition);
     expect(consumed.carryover.plannedNutrition.caloriesKcal).toBe(0);
     expect(consumed.carryover.recordedNutrition).toEqual(plan.nutrition);
-    expect(consumed.optimization).toEqual(tomorrow.optimization);
+    expect(consumed.planningConsumed.caloriesKcal).toBe(0);
+    expect(consumed.registeredConsumed).toEqual(plan.nutrition);
+    expect(consumed.excludedCarryoverFromPlanning).toEqual(plan.nutrition);
+    expect(consumed.optimization.maxAdditionalCaloriesKcal).toBe(3234);
     expect(writes).toBe(0);
     expect(requests).toBe(5);
+    expect(await calculate("2026-09-15")).toEqual(consumed);
+    expect(requests).toBe(7);
+    expect(writes).toBe(0);
+    expect(pending.status).toBe("pending");
     const stale = await rpc.request("tools/call", {
       name: "fitia-gainer-carryover-update",
       arguments: { action: "save", draft: { ...source.carryoverDraft, configVersion: "0" }, confirm: false },
     });
     expect(JSON.parse(stale.result.content[0].text).error.code).toBe("CONFIG_VERSION_CONFLICT");
     expect(writes).toBe(0);
+  } finally {
+    globalThis.fetch = previousFetch;
+    await rpc.close();
+  }
+});
+test("MCP sizes from normal intake after a verified 61/39 carryover, without changing inventory", async () => {
+  const date = "2026-09-16";
+  const config = { ...defaultGainerConfig(), sweetenerInventory: "honey_only" as const };
+  const plan = makeCarryoverPlan(
+    {
+      sourceDate: "2026-09-15",
+      recipeId: "polack_labs_mass_gainer_v1",
+      scaleFactor: 1.65,
+      sweetener: "honey_only",
+      nightPercent: 61,
+    },
+    config,
+  );
+  const record = { ...plan, status: "pending" as const, version: "1", consumedEntry: null };
+  const normal = { caloriesKcal: 1413, proteinG: 80, carbsG: 153, fatG: 50 };
+  const entryId = quickEntryIdentity("test-user", date, "breakfast", plan.morningCarryoverMealLog.idempotencyKey).id;
+  const item = (nutrition: typeof normal) => ({
+    type: "2",
+    name: "synthetic meal",
+    isEaten: true,
+    calories: nutrition.caloriesKcal,
+    proteins: nutrition.proteinG,
+    carbs: nutrition.carbsG,
+    fats: nutrition.fatG,
+  });
+  const previousFetch = globalThis.fetch;
+  let requests = 0,
+    writes = 0;
+  globalThis.fetch = Object.assign(
+    async (url: string | URL | Request, init?: RequestInit) => {
+      expect(String(url)).toStartWith("https://firestore.googleapis.com/");
+      expect(String(url)).toEndWith("16-09-2026");
+      expect(init?.method ?? "GET").toBe("GET");
+      requests++;
+      return Response.json({
+        name: String(url).split("/v1/")[1],
+        updateTime: "2026-09-16T20:00:00Z",
+        fields: fields({
+          mealProgress: {
+            targetCalories: 2028,
+            targetProteins: 110,
+            targetCarbs: 270,
+            targetFats: 67.6,
+            consumedCalories: normal.caloriesKcal + plan.nutrition.caloriesKcal,
+            meals: { breakfast: { typeID: 0, mealItems: { normal: item(normal), [entryId]: item(plan.nutrition) } } },
+          },
+        }),
+      });
+    },
+    { preconnect: previousFetch.preconnect },
+  );
+  const token = `e30.${Buffer.from(JSON.stringify({ exp: 4102444800 })).toString("base64url")}.synthetic`;
+  const rpc = await client({
+    token,
+    trustedAccountId: "test-user",
+    canWrite: true,
+    gainerConfig: {
+      async get() {
+        return { config, version: "9", persisted: true };
+      },
+      async update() {
+        writes++;
+        return {};
+      },
+    },
+    gainerCarryover: {
+      async list(targetDate) {
+        expect(targetDate).toBe(date);
+        return [record];
+      },
+      async update() {
+        writes++;
+        return {};
+      },
+    },
+  });
+  const read = async (name: string, args: Record<string, unknown>) => {
+    const response = await rpc.request("tools/call", { name, arguments: args });
+    expect(response.result.isError).not.toBe(true);
+    return JSON.parse(response.result.content[0].text);
+  };
+  try {
+    const summary = await read("fitia-day-summary", { date });
+    const calculate = () => read("fitia-gainer-calculate", { date, mode: "fitia_optimal", sweetener: "none" });
+    const result = await calculate();
+    expect(result.fitia).toEqual(summary);
+    expect(result.registeredConsumed).toEqual(summary.consumed);
+    expect(result.planningConsumed).toEqual(normal);
+    expect(result.excludedCarryoverFromPlanning).toEqual(plan.nutrition);
+    expect(result.carryover.optimizationConsumed).toEqual(normal);
+    expect(result.practicalNutrition.caloriesKcal).toBeGreaterThanOrEqual(600);
+    expect(result.practicalNutrition.caloriesKcal).toBeLessThanOrEqual(620);
+    expect(result.effectiveProjection.consumedAfter.caloriesKcal).toBeCloseTo(
+      normal.caloriesKcal + result.practicalNutrition.caloriesKcal,
+      5,
+    );
+    expect(result.fitiaProjection.consumedAfter.caloriesKcal).toBeCloseTo(
+      summary.consumed.caloriesKcal + result.practicalNutrition.caloriesKcal,
+      5,
+    );
+    expect(result.sweetener.mode).toBe("none");
+    expect(result.configVersion).toBe("9");
+    expect(await calculate()).toEqual(result);
+    expect(requests).toBe(5);
+    const saved = await read("fitia-gainer-config-get", {});
+    expect(saved.config).toEqual(config);
+    expect(saved.version).toBe("9");
+    expect(writes).toBe(0);
+    expect(record.status).toBe("pending");
   } finally {
     globalThis.fetch = previousFetch;
     await rpc.close();

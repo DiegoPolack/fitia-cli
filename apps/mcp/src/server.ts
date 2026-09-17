@@ -1,6 +1,6 @@
 import { validateDate } from "@fitia/core/diary";
 import { calculateGainer } from "@fitia/core/gainer/calculator";
-import { carryoverContext, planningDay, recordedCarryover } from "@fitia/core/gainer/carryover";
+import { carryoverContext, recordedCarryover } from "@fitia/core/gainer/carryover";
 import { sweetenerModes } from "@fitia/core/gainer/recipe";
 import { makeCarryoverPlan } from "@fitia/core/gainer/serving";
 import {
@@ -450,7 +450,7 @@ export function createServer(options: ServerOptions = {}) {
     "fitia-gainer-calculate",
     {
       description:
-        "Calculate Polack Labs Mass Gainer v1 from the same live summary as fitia-day-summary. fitia_optimal optimizes all four 90-110% green ranges, including no drink; budgets pending carryover once and splits large batches between tonight and tomorrow using saved night limits. Use calories for explicit kcal. Default sweetener=auto and saved mode. Never reconstruct the recipe. Read-only: returns fullBatch, servingStrategy, separate night/morning log payloads, carryoverDraft, practical amounts, macros, cost, greenRanges and optimization. Save carryover only through an explicitly approved mutation; never log the whole split batch on one day.",
+        "Calculate Polack Labs Mass Gainer v1 from the same live summary as fitia-day-summary. fitia_optimal uses planningConsumed: excludes verified registered carryovers from earlier source dates, reserves unregistered pending portions once, and optimizes all four 90-110% green ranges. Returns registeredConsumed, excludedCarryoverFromPlanning, planningBasis, effectiveProjection (full practical batch attributed to today) and fitiaProjection (only today's practical serving added to real Fitia totals). Do not subtract carryovers manually. Splits large batches using saved night limits; returns separate night/morning log payloads, carryoverDraft, practical amounts, macros and cost. Use calories for explicit kcal. Default sweetener=auto and saved mode. Never reconstruct the recipe. Read-only; save carryover only through an approved mutation and never log the whole split batch on one day.",
       inputSchema: z.strictObject({
         date,
         mode: z.enum(["calories", "fitia_optimal"]).optional(),
@@ -471,22 +471,10 @@ export function createServer(options: ServerOptions = {}) {
           return yield* Effect.try({
             try: () => {
               const carryover = carryoverContext(records, day, diary, options.trustedAccountId ?? "");
-              const optimal = (input.mode ?? saved.config.defaultMode) === "fitia_optimal";
-              const plannedDay = optimal ? planningDay(day, carryover.plannedNutrition) : day;
-              const result = calculateGainer(input, saved.config, plannedDay);
+              const result = calculateGainer(input, saved.config, day, carryover);
               return {
                 ...result,
-                fitia: day,
-                targetCaloriesKcal: input.targetCaloriesKcal ?? day.remaining.caloriesKcal,
                 configVersion: saved.version,
-                ...(records.length
-                  ? {
-                      carryover,
-                      planningBasis: optimal
-                        ? "Optimization and projections include unregistered pending carryover; fitia remains the unmodified recorded summary."
-                        : "Explicit calories mode keeps its requested size; carryover is shown as context only and is not added to its projections.",
-                    }
-                  : {}),
                 ...("carryoverDraft" in result
                   ? { carryoverDraft: { ...result.carryoverDraft, configVersion: saved.version } }
                   : {}),

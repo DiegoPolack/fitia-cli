@@ -1,6 +1,6 @@
 import { type DiaryClient, type MealName, mealTypes, quickEntryIdentity } from "../diary.ts";
 import { CliError } from "../errors.ts";
-import { type DaySummary, emptyMacros, type Macros, macroKeys, round } from "../nutrition.ts";
+import { type DaySummary, difference, emptyMacros, macroKeys, round } from "../nutrition.ts";
 import type { CarryoverPlan } from "./serving.ts";
 
 export type DiarySnapshot = Awaited<ReturnType<DiaryClient["get"]>>;
@@ -63,9 +63,20 @@ export function carryoverContext(
       "Repeat the read-only calculation.",
     );
   const planned = emptyMacros(),
-    recorded = emptyMacros();
+    recorded = emptyMacros(),
+    excluded = emptyMacros();
   const references = new Set<string>();
+  const ids = new Set<string>();
   const items = records.map((record) => {
+    if (record.targetDate !== day.date)
+      throw new CliError("CARRYOVER_DATE_MISMATCH", "Carryover and calculation dates differ.", "Read the target date.");
+    if (ids.has(record.id))
+      throw new CliError(
+        "CARRYOVER_DUPLICATE_REFERENCE",
+        "The same carryover was supplied twice.",
+        "Read unique carryover records.",
+      );
+    ids.add(record.id);
     if (record.status === "cancelled") return { ...record, effectiveStatus: "cancelled" as const };
     if (!diary)
       throw new CliError(
@@ -90,39 +101,45 @@ export function carryoverContext(
         );
       references.add(key);
     }
-    for (const key of macroKeys) (entry ? recorded : planned)[key] += record.nutrition[key];
+    const excludeFromPlanning = entry !== null && record.sourceDate < day.date;
+    for (const key of macroKeys) {
+      (entry ? recorded : planned)[key] += record.nutrition[key];
+      if (excludeFromPlanning) excluded[key] += record.nutrition[key];
+    }
     return {
       ...record,
       effectiveStatus: entry ? ("registered_in_fitia" as const) : ("pending" as const),
       verifiedEntry: entry,
+      excludedFromPlanning: excludeFromPlanning,
     };
   });
   const normalConsumed = { ...day.consumed },
-    optimizationConsumed = { ...day.consumed };
+    planningConsumed = { ...day.consumed };
   for (const key of macroKeys) {
     planned[key] = round(planned[key]);
     recorded[key] = round(recorded[key]);
+    excluded[key] = round(excluded[key]);
     if (day.consumed[key] !== null) {
-      normalConsumed[key] = round(day.consumed[key]! - recorded[key]);
-      optimizationConsumed[key] = round(day.consumed[key]! + planned[key]);
+      normalConsumed[key] = round(day.consumed[key]! - excluded[key]);
+      planningConsumed[key] = round(normalConsumed[key]! + planned[key]);
     }
   }
   return {
     items,
     plannedNutrition: planned,
     recordedNutrition: recorded,
+    registeredConsumed: { ...day.consumed },
+    excludedCarryoverFromPlanning: excluded,
     normalConsumed,
-    optimizationConsumed,
-    rule: "Fitia consumed totals remain unchanged and include registered carryover once. Only unregistered pending carryover is added to the planning budget. Origin is explanatory, never a transfer of targets or recorded macros.",
+    planningConsumed,
+    optimizationConsumed: planningConsumed,
+    rule: "Planning equals registered Fitia consumption minus verified registered carryovers from earlier source dates plus unregistered pending portions once. Same-day registered portions remain included. Fitia totals, targets and carryover state are unchanged.",
   };
 }
 
-export function planningDay(day: DaySummary, planned: Macros): DaySummary {
-  const consumed = { ...day.consumed },
-    remaining = { ...day.remaining };
-  for (const key of macroKeys) {
-    if (consumed[key] !== null) consumed[key] = round(consumed[key]! + planned[key]);
-    if (remaining[key] !== null) remaining[key] = round(remaining[key]! - planned[key]);
-  }
-  return { ...day, consumed, remaining };
+export type CarryoverContext = ReturnType<typeof carryoverContext>;
+
+export function planningDay(day: DaySummary, context: CarryoverContext): DaySummary {
+  const consumed = { ...context.planningConsumed };
+  return { ...day, consumed, remaining: difference(day.goals, consumed) };
 }
