@@ -30,7 +30,7 @@ export function greenRanges(goals: MaybeMacros): GreenRanges | null {
   ) as GreenRanges;
 }
 
-function states(values: Macros, ranges: GreenRanges): MetricStates {
+export function states(values: Macros, ranges: GreenRanges): MetricStates {
   return Object.fromEntries(
     macroKeys.map((key) => [
       key,
@@ -43,41 +43,49 @@ function states(values: Macros, ranges: GreenRanges): MetricStates {
   ) as MetricStates;
 }
 
+export function scoreGainer(
+  consumed: Macros,
+  ranges: GreenRanges,
+  drink: Macros,
+  metricWeights: Macros = optimizationPolicy.metricWeights,
+  alreadyHighMultipliers: Macros = { caloriesKcal: 1, proteinG: 1, carbsG: 1, fatG: 1 },
+) {
+  const penalties = emptyMacros();
+  const after = emptyMacros();
+  for (const key of macroKeys) {
+    after[key] = round(consumed[key] + drink[key]);
+    const { min, max, target } = ranges[key];
+    const deficit = Math.max(0, min - after[key]);
+    const excess = Math.max(0, after[key] - max);
+    const originalExcess = Math.max(0, consumed[key] - max);
+    const excessPenalty =
+      originalExcess > 0
+        ? originalExcess * optimizationPolicy.excessWeight +
+          Math.max(0, excess - originalExcess) *
+            optimizationPolicy.alreadyHighIncrementWeight *
+            alreadyHighMultipliers[key]
+        : excess * optimizationPolicy.excessWeight;
+    penalties[key] =
+      metricWeights[key] *
+      ((deficit + excessPenalty) / Math.max(target, 1) +
+        (Math.max(deficit, excess) > optimizationPolicy.numericTolerance ? optimizationPolicy.outsideRangePenalty : 0));
+  }
+  const extraCalories =
+    (optimizationPolicy.extraCaloriesWeight * drink.caloriesKcal) / Math.max(ranges.caloriesKcal.target, 1);
+  return {
+    total: macroKeys.reduce((sum, key) => sum + penalties[key], extraCalories),
+    penalties,
+    extraCalories,
+    states: states(after, ranges),
+    values: after,
+  };
+}
+
 export function optimizeGainer(consumed: Macros, ranges: GreenRanges, sweetener: Macros, practicalSweetener: Macros) {
   const before = states(consumed, ranges);
   const maxAdditionalCalories = Math.max(0, ranges.caloriesKcal.max - consumed.caloriesKcal);
   const maxScale = Math.max(0, (maxAdditionalCalories - sweetener.caloriesKcal) / baseMixNutrition.caloriesKcal);
-  const score = (drink: Macros) => {
-    const penalties = emptyMacros();
-    const after = emptyMacros();
-    for (const key of macroKeys) {
-      after[key] = round(consumed[key] + drink[key]);
-      const { min, max, target } = ranges[key];
-      const deficit = Math.max(0, min - after[key]);
-      const excess = Math.max(0, after[key] - max);
-      const originalExcess = Math.max(0, consumed[key] - max);
-      const excessPenalty =
-        originalExcess > 0
-          ? originalExcess * optimizationPolicy.excessWeight +
-            Math.max(0, excess - originalExcess) * optimizationPolicy.alreadyHighIncrementWeight
-          : excess * optimizationPolicy.excessWeight;
-      penalties[key] =
-        optimizationPolicy.metricWeights[key] *
-        ((deficit + excessPenalty) / Math.max(target, 1) +
-          (Math.max(deficit, excess) > optimizationPolicy.numericTolerance
-            ? optimizationPolicy.outsideRangePenalty
-            : 0));
-    }
-    const extraCalories =
-      (optimizationPolicy.extraCaloriesWeight * drink.caloriesKcal) / Math.max(ranges.caloriesKcal.target, 1);
-    return {
-      total: macroKeys.reduce((sum, key) => sum + penalties[key], extraCalories),
-      penalties,
-      extraCalories,
-      states: states(after, ranges),
-      values: after,
-    };
-  };
+  const score = (drink: Macros) => scoreGainer(consumed, ranges, drink);
   // Zero means no drink: no honey, packets, creatine, water or logging payload.
   const baseline = score(emptyMacros());
   let best = { scale: 0, score: baseline };

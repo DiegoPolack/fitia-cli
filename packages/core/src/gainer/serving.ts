@@ -2,9 +2,16 @@ import { createHash } from "node:crypto";
 import { validateDate } from "../diary.ts";
 import { CliError } from "../errors.ts";
 import { type DaySummary, type Macros, macroKeys, round } from "../nutrition.ts";
+import { validAdaptiveAmounts } from "./adaptive.ts";
 import { greenRanges } from "./optimization.ts";
-import { portionNutrition, roundedMacros, scaleMacros } from "./portion.ts";
-import { type GainerConfig, gainerRecipe, type SweetenerInventory } from "./recipe.ts";
+import { amountsNutrition, drySolidsG, portionNutrition, roundedMacros, scaleMacros } from "./portion.ts";
+import {
+  baseMixNutrition,
+  type GainerAmounts,
+  type GainerConfig,
+  gainerRecipe,
+  type SweetenerInventory,
+} from "./recipe.ts";
 
 export const servingPolicy = { percentStep: 1, minimumCarryoverCaloriesKcal: 100 } as const;
 export type ConcreteSweetener = Exclude<SweetenerInventory, "unknown">;
@@ -14,6 +21,7 @@ export type CarryoverDraft = {
   scaleFactor: number;
   sweetener: ConcreteSweetener;
   nightPercent: number;
+  adaptiveAmounts?: GainerAmounts;
 };
 
 export function nextDate(date: string) {
@@ -85,7 +93,25 @@ export function makeCarryoverPlan(draft: CarryoverDraft, config: GainerConfig) {
   const sweetener = gainerRecipe.sweeteners[draft.sweetener];
   const honeyG = Math.round(sweetener.honeyTablespoons * config.honeyGramsPerTablespoon);
   const honey = scaleMacros(config.honeyProfile.per100G, honeyG / 100);
-  const nutrition = portionNutrition(draft.scaleFactor, honey, honey).practical;
+  const amounts = draft.adaptiveAmounts;
+  const nutrition = amounts
+    ? amountsNutrition(amounts, honey)
+    : portionNutrition(draft.scaleFactor, honey, honey).practical;
+  if (
+    amounts &&
+    (!validAdaptiveAmounts(amounts, config.adaptive) ||
+      nutrition.caloriesKcal > config.adaptive.maxBatchCaloriesKcal ||
+      Math.abs(
+        draft.scaleFactor -
+          amountsNutrition(amounts, { caloriesKcal: 0, proteinG: 0, carbsG: 0, fatG: 0 }).caloriesKcal /
+            baseMixNutrition.caloriesKcal,
+      ) > 1e-6)
+  )
+    throw new CliError(
+      "INVALID_ADAPTIVE_BATCH",
+      "Adaptive batch quantities or scale do not match the saved configuration.",
+      "Use the exact draft returned by the calculator.",
+    );
   const portions = divideNutrition(nutrition, draft.nightPercent);
   if (
     nutrition.caloriesKcal <= config.maxNightCaloriesKcal ||
@@ -103,17 +129,24 @@ export function makeCarryoverPlan(draft: CarryoverDraft, config: GainerConfig) {
       id: i.id,
       name: i.name,
       ...(i.unit === "g"
-        ? { practicalG: Math.round(i.amount * draft.scaleFactor) }
-        : { practicalMl: Math.round(i.amount * draft.scaleFactor) }),
+        ? { practicalG: amounts?.[i.id] ?? Math.round(i.amount * draft.scaleFactor) }
+        : { practicalMl: amounts?.[i.id] ?? Math.round(i.amount * draft.scaleFactor) }),
     })),
-    water: { practicalMl: Math.round((gainerRecipe.waterMl * draft.scaleFactor) / 10) * 10 },
+    water: {
+      practicalMl:
+        Math.round(
+          (amounts
+            ? drySolidsG(amounts) * config.adaptive.waterMlPerDryGram
+            : gainerRecipe.waterMl * draft.scaleFactor) / 10,
+        ) * 10,
+    },
     creatineG: gainerRecipe.creatineG,
     sweetener: { mode: draft.sweetener, ...sweetener, practicalHoneyG: honeyG },
   };
   const id = createHash("sha256")
     .update(JSON.stringify([draft.sourceDate, targetDate, draft.recipeId, fullBatch, draft.nightPercent]))
     .digest("hex");
-  const name = gainerRecipe.name;
+  const name = `${gainerRecipe.name}${amounts ? " adaptive" : ""}`;
   return {
     id,
     sourceDate: draft.sourceDate,

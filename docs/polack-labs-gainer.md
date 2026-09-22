@@ -81,6 +81,86 @@ when the actual label is available. Cinnamon and vanilla nutrition are excluded
 because no labels were provided; their quantities and costs are included.
 Stevia and creatine contribute zero kcal/macros in this model.
 
+## Optional adaptive mode
+
+`fitia_adaptive` varies individual ingredient amounts; `fitia_optimal` and the
+initial default remain unchanged. Both reuse the live core summary and verified
+carryover planning context. No nutrition/price data is copied or fetched from a
+second source. New config values resolve from defaults on read: no migration or
+writes to existing JSON preferences are needed.
+
+The `adaptive` config object contains `bounds`, `deviationWeight` (default 0.01),
+`metricWeights` (calories 4, each macro 1), `alreadyHighMultipliers` (protein 5,
+fat 8, others 1), `waterMlPerDryGram`, `maxDrySolidsG` (400), and
+`maxBatchCaloriesKcal` (2000). These last two are full-batch limits, independent
+of the existing night limits. Nested config patches merge, preserving untouched
+fields; bounds updates provide both min/max for each changed ingredient. Normal
+preview, explicit approval, version, audit and account isolation apply.
+
+Default bounds are **absolute factors of the canonical base quantity**, not
+factors of an optimized serving. Integer bounds are ceil(base × min) through
+floor(base × max), inclusive. No drink is always considered separately.
+
+| Ingredient | Min factor | Max factor | Allowed practical units |
+|---|---:|---:|---:|
+| Quaker | 0.2 | 2 | 10–100 g |
+| Anchor | 0 | 2 | 0–100 g |
+| Nestum | 0.25 | 6 | 5–120 g |
+| 7 Cereales | 0.3 | 2 | 3–20 g |
+| Maca | 0.4 | 1.6 | 2–8 g |
+| Cocoa | 0.4 | 1.6 | 2–8 g |
+| Cinnamon | 0 | 2 | 0–2 g |
+| Vanilla | 1/3 | 5/3 | 1–5 ml |
+
+Water derives from dry gram ingredients plus the fixed creatine. The default
+ratio is derived from the original water/dry-solids recipe ratio; liquid
+honey/vanilla and packets with unknown mass are excluded. Water rounds to 10 ml.
+Creatine remains fixed for the batch; split portions share it as before.
+
+The shared green-range score retains normalized deficits/excesses, outside-band
+penalties and a small extra-calorie cost. Adaptive overrides metric weights and
+multiplies the existing already-high increment cost by `alreadyHighMultipliers`:
+with defaults this costs 0.5 for additional already-high protein and 0.8 for fat,
+versus 0.1 in the fixed mode. Existing excess is constant, never a reward.
+The secondary deviation cost is `deviationWeight × mean(abs(q_i − base_i × s) /
+max(base_i × s, 1))`, with `s` the base-calorie equivalent excluding sweeteners.
+It favors original proportions at similar nutrition. Configured sweeteners stay
+fixed and enter every candidate's exact/practical nutrition and calorie checks.
+
+Search uses deterministic starting recipes (minimum, clipped fixed optimum,
+and calorie-lower-band proportions), integer coordinate moves and calorie-balanced
+pair exchanges at 8/4/2/1 unit resolution. Each stage allows 16 improving passes;
+a shared cache caps unique candidate evaluations at 18000. If all ingredient
+minimums are zero, the starts include each feasible one-gram nutritional ingredient.
+This is bounded local search, not exhaustive/global optimization. Every candidate
+is checked against integer bounds, dry mass, batch cap and calorie upper green bound.
+A near-ceiling day can legitimately have no recipe fitting the minimum amounts.
+
+`optimization.adaptive` exposes adjustments, integer bounds, resolved config,
+deviation cost, search budget and a comparison using **the same adaptive nutrition
+weights for both recipes**. Do not compare raw cross-mode scores. `reason` explains
+initial low/high metrics and ingredients favored/reduced relative to a proportional
+mix of equal base kcal. Adaptive `scaleFactor` is retained only as a calorie
+equivalent; `baseMix.scaleFactorBasis` marks this. Individual exact/practical
+ingredient quantities are identical integers (honey can retain its configured
+exact/practical difference). Use returned nutrition, cost and logs directly.
+
+Adaptive carryover drafts additionally contain `adaptiveAmounts`: all eight
+individual ingredient quantities. The existing snapshot freezes these and config;
+reconstruction validates them and recomputes nutrition from canonical profiles.
+Client-supplied macro totals are not trusted. Old drafts/hashes remain valid.
+Both modes share split logic/projections; today's log uses only the night fraction.
+
+```json
+{"date":"2026-09-17","mode":"fitia_adaptive","sweetener":"none"}
+```
+
+Example config preview, preserving other bounds/weights:
+
+```json
+{"patch":{"adaptive":{"bounds":{"nestum":{"minFactor":0.25,"maxFactor":5}},"metricWeights":{"carbsG":1.5}}},"confirm":false}
+```
+
 ## Tools
 
 ### Night serving and carryover
@@ -205,7 +285,7 @@ This is a synthetic regression example, not a modification of the real diary.
 All inputs are strict objects. No tool accepts a user ID.
 
 - `fitia-gainer-calculate`: `{date, mode?, sweetener?, targetCaloriesKcal?}`.
-  `date` is a real local calendar date; `mode` is `calories | fitia_optimal`;
+  `date` is a real local calendar date; `mode` is `calories | fitia_optimal | fitia_adaptive`;
   `sweetener` defaults to `auto`, or `both | honey_only | stevia_only | none`.
   Explicit targets range from zero to 20000 kcal. Read-only, requires `fitia:read`.
 - `fitia-gainer-config-get`: `{}`. Returns resolved config, persistent-state

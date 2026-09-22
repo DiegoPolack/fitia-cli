@@ -14,6 +14,9 @@ export const carryoverDraftSchema = z.strictObject({
   sweetener: z.enum(sweetenerModes),
   nightPercent: z.number().int().min(1).max(99),
   configVersion: versionSchema,
+  adaptiveAmounts: z
+    .record(z.enum(gainerRecipe.ingredients.map((i) => i.id)), z.number().int().min(0).max(1000))
+    .optional(),
 });
 export const carryoverUpdateSchema = z
   .strictObject({

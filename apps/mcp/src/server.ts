@@ -1,7 +1,7 @@
 import { validateDate } from "@fitia/core/diary";
 import { calculateGainer } from "@fitia/core/gainer/calculator";
 import { carryoverContext, recordedCarryover } from "@fitia/core/gainer/carryover";
-import { sweetenerModes } from "@fitia/core/gainer/recipe";
+import { gainerModes, sweetenerModes } from "@fitia/core/gainer/recipe";
 import { makeCarryoverPlan } from "@fitia/core/gainer/serving";
 import {
   CliError,
@@ -450,10 +450,10 @@ export function createServer(options: ServerOptions = {}) {
     "fitia-gainer-calculate",
     {
       description:
-        "Calculate Polack Labs Mass Gainer v1 from the same live summary as fitia-day-summary. fitia_optimal uses planningConsumed: excludes verified registered carryovers from earlier source dates, reserves unregistered pending portions once, and optimizes all four 90-110% green ranges. Returns registeredConsumed, excludedCarryoverFromPlanning, planningBasis, effectiveProjection (full practical batch attributed to today) and fitiaProjection (only today's practical serving added to real Fitia totals). Do not subtract carryovers manually. Splits large batches using saved night limits; returns separate night/morning log payloads, carryoverDraft, practical amounts, macros and cost. Use calories for explicit kcal. Default sweetener=auto and saved mode. Never reconstruct the recipe. Read-only; save carryover only through an approved mutation and never log the whole split batch on one day.",
+        "Calculate Polack Labs Mass Gainer v1 from the same live summary as fitia-day-summary. fitia_optimal keeps fixed proportions (default). Optional fitia_adaptive searches bounded individual whole ingredient amounts using saved adaptive settings, with extra penalties for adding already-high protein/fat; its scaleFactor is only a calorie equivalent, never a preparation instruction. Both use planningConsumed: excludes verified registered carryovers from earlier source dates, reserves unregistered pending portions once, and optimizes all four 90-110% green ranges. Returns registeredConsumed, excludedCarryoverFromPlanning, planningBasis, effectiveProjection (full practical batch attributed to today) and fitiaProjection (only today's practical serving added to real Fitia totals). Do not subtract carryovers manually. Splits large batches using saved night limits; returns separate night/morning log payloads, carryoverDraft, practical amounts, macros and cost. Use calories for explicit kcal. Default sweetener=auto and saved mode. Never reconstruct the recipe. Read-only; save carryover only through an approved mutation and never log the whole split batch on one day.",
       inputSchema: z.strictObject({
         date,
-        mode: z.enum(["calories", "fitia_optimal"]).optional(),
+        mode: z.enum(gainerModes).optional(),
         sweetener: z.enum(["auto", ...sweetenerModes]).default("auto"),
         targetCaloriesKcal: z.number().min(0).max(20_000).optional(),
       }),

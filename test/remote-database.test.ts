@@ -1,7 +1,8 @@
 import { afterAll, beforeAll, expect, test } from "bun:test";
 import { readFile } from "node:fs/promises";
 import { PGlite } from "@electric-sql/pglite";
-import { defaultGainerConfig } from "@fitia/core/gainer/recipe";
+import { amountsNutrition } from "@fitia/core/gainer/portion";
+import { baseMixNutrition, defaultGainerConfig } from "@fitia/core/gainer/recipe";
 import { makeCarryoverPlan } from "@fitia/core/gainer/serving";
 import { decryptJson, importEncryptionKey, randomCode } from "../apps/mcp/src/remote/crypto.ts";
 import { GainerCarryoverRepository } from "../apps/mcp/src/remote/gainer-carryover.ts";
@@ -385,4 +386,69 @@ test("durable write locks exclude duplicate attempts and audit records are encry
   await first.release("hash");
   await second.acquire("hash");
   expect(await remoteWriteJournal({ ...options, disabled: true }).disabled()).toBe(true);
+});
+
+test("adaptive config patches deep-merge with CAS and never write on get or preview", async () => {
+  const store = configRepository("adaptive-config");
+  const patch = { adaptive: { bounds: { anchor: { minFactor: 0, maxFactor: 1.5 } }, metricWeights: { carbsG: 2 } } };
+  const before = await db.query("SELECT * FROM fitia_gainer_config");
+  const preview = await store.update(patch, false);
+  expect(preview).toMatchObject({
+    expectedVersion: "0",
+    after: { defaultMode: "fitia_optimal", adaptive: { metricWeights: { caloriesKcal: 4, carbsG: 2 } } },
+  });
+  expect((await db.query("SELECT * FROM fitia_gainer_config")).rows).toEqual(before.rows);
+  await expect(store.update(patch, true)).rejects.toThrow("preview version");
+  await store.update(patch, true, "0");
+  await store.update({ adaptive: { deviationWeight: 0.02 } }, false);
+  await store.update({ adaptive: { deviationWeight: 0.02 } }, true, "1");
+  expect((await store.get()).config.adaptive).toMatchObject({
+    bounds: { anchor: { maxFactor: 1.5 } },
+    metricWeights: { carbsG: 2 },
+    deviationWeight: 0.02,
+  });
+  expect((await configRepository("adaptive-other").get()).config.adaptive.metricWeights.carbsG).toBe(1);
+  await expect(store.update(patch, true, "0")).rejects.toThrow("preview version");
+});
+
+test("adaptive carryover snapshot roundtrips actual ingredients and config without changing legacy IDs", async () => {
+  const config = defaultGainerConfig();
+  const amounts = {
+    quaker_oats: 70,
+    anchor: 30,
+    nestum: 100,
+    seven_cereals: 14,
+    maca: 5,
+    cocoa: 5,
+    cinnamon: 1,
+    vanilla: 3,
+  };
+  const base = amountsNutrition(amounts, { caloriesKcal: 0, proteinG: 0, carbsG: 0, fatG: 0 });
+  const plan = makeCarryoverPlan(
+    {
+      sourceDate: "2026-09-17",
+      recipeId: "polack_labs_mass_gainer_v1",
+      scaleFactor: base.caloriesKcal / baseMixNutrition.caloriesKcal,
+      adaptiveAmounts: amounts,
+      sweetener: "none",
+      nightPercent: 70,
+    },
+    config,
+  );
+  const store = carryRepository("adaptive-carry");
+  await store.update({ action: "save", plan, confirm: false }, noEntry);
+  expect(await store.list("2026-09-18")).toEqual([]);
+  await store.update({ action: "save", plan, confirm: true, expectedVersion: "0" }, noEntry);
+  const saved = (await store.list("2026-09-18"))[0]!;
+  expect(saved.id).toBe(plan.id);
+  expect(saved.definition.draft.adaptiveAmounts).toEqual(amounts);
+  expect(saved.fullBatch).toEqual(plan.fullBatch);
+  expect(await carryRepository("adaptive-other").list("2026-09-18")).toEqual([]);
+  // Old JSON rows did not contain adaptive preferences; decoding must preserve the old batch hash.
+  const legacy = carryRepository("legacy-no-adaptive");
+  await legacy.update({ action: "save", plan: carryPlan, confirm: true, expectedVersion: "0" }, noEntry);
+  await db.query(
+    "UPDATE fitia_gainer_carryover SET definition = definition #- '{config,adaptive}' WHERE clerk_user_id = 'legacy-no-adaptive'",
+  );
+  expect((await legacy.list(carryPlan.targetDate))[0]!.id).toBe(carryPlan.id);
 });

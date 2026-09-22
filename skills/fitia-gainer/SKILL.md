@@ -17,6 +17,16 @@ Present a compact recommendation using the returned `reason`: calories remaining
 
 For optimal results, explain `greenRanges` and `optimization.before/after`, `improvedMetrics`, `enteredGreen`, and `leftGreen` as relevant. `targetCaloriesKcal` still reports the legacy central remaining amount, not the selected drink size; the upper-band headroom is `optimization.maxAdditionalCaloriesKcal`. Do not describe central remaining macros as deficits when they are already green. Keep the existing status contract: `not_recommended` plus `optimization.outcome: not_needed` means all four metrics already green; `not_beneficial` means no evaluated serving beats skipping the drink. `limited_by_calories` and `best_available` explain a compromise, not full correction. Never log a zero serving or its configured sweeteners.
 
+## Optional ingredient adaptation
+
+Keep `fitia_optimal` as the default for ordinary batido questions. When the user explicitly asks to adapt ingredient proportions, use `mode: fitia_adaptive`; the usual sweetener default remains `auto`. Both modes use the same authoritative recipe profiles and planning/carryover context. Do not substitute generic food profiles or manually optimize quantities.
+
+Adaptive output contains the whole quantities, water derived from dry solids, nutrition and cost. Its `scaleFactor` is only a calorie equivalent: **never use it to multiply the base recipe**. Explain relevant changes from `optimization.adaptive.ingredientAdjustments` and the returned `reason`. Bounds and extra penalties for adding already-high protein/fat are deterministic settings. This bounded search reports the best candidate found, not a guaranteed global optimum.
+
+For comparison use `optimization.adaptive.comparison`: it evaluates both recipes with the same adaptive nutrition weights. Raw scores from different modes use different weights and must not be compared directly. A fixed recipe can fall outside the adaptive bounds. Adaptive can return no drink when no allowed whole-quantity recipe fits or improves the score. Do not loosen bounds or remove honey silently.
+
+Adaptive splits contain `carryoverDraft.adaptiveAmounts`. Preserve the entire returned draft when the user asks to save; never convert it back to a proportional scale. The frozen morning payload remains authoritative. Adaptive settings use the existing config preview/approval flow; nested `adaptive` patches merge, so changing one weight does not reset others.
+
 ## Night split and next-morning carryover
 
 Use `servingStrategy`. For `single_serving`, present the usual simple result. For `split_next_morning`, explain `servingReason`, show the full batch's practical ingredients once, then the returned night/morning percentages and nutrition separately. The night limits come from saved configuration; do not invent a 50/50 division or always choose the maximum. Blend the complete batch thoroughly, weigh the finished mixture and divide by the returned whole percentages. Refrigerate the remainder promptly for the following morning. Water is the recipe's water contribution, not a measured final volume. Creatine is already in the batch and is shared between portions; do not add another full dose to either portion.

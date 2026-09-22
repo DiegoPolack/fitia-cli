@@ -38,6 +38,10 @@ test("MCP exposes bundled skill in initialization/resource and strict gainer sch
     expect(resource).not.toContain("578.5");
     const tools = (await rpc.request("tools/list", {})).result.tools;
     expect(tools.find((t: any) => t.name === "fitia-gainer-calculate").annotations.readOnlyHint).toBe(true);
+    expect(tools.find((t: any) => t.name === "fitia-gainer-calculate").inputSchema.properties.mode.enum).toContain(
+      "fitia_adaptive",
+    );
+    expect(resource).toContain("fitia_adaptive");
     const update = tools.find((t: any) => t.name === "fitia-gainer-config-update");
     expect(update.inputSchema.properties.confirm.default).toBe(false);
     expect(update.inputSchema.additionalProperties).toBe(false);
@@ -213,6 +217,24 @@ test("MCP split and next-day pending/registered calculations only GET Fitia and 
     expect(requests).toBe(7);
     expect(writes).toBe(0);
     expect(pending.status).toBe("pending");
+    for (const date of ["2026-09-14", "2026-09-15"]) {
+      const adaptive = await rpc.request("tools/call", {
+        name: "fitia-gainer-calculate",
+        arguments: { date, mode: "fitia_adaptive", sweetener: "none" },
+      });
+      expect(adaptive.result.isError).not.toBe(true);
+      const result = JSON.parse(adaptive.result.content[0].text);
+      expect(result.optimization.mode).toBe("fitia_adaptive");
+      expect(result.configUsed.defaultMode).toBe("fitia_optimal");
+      expect(result.sweetener.mode).toBe("none");
+      if (date.endsWith("15")) {
+        expect(result.planningConsumed.caloriesKcal).toBe(0);
+        expect(result.excludedCarryoverFromPlanning).toEqual(plan.nutrition);
+      }
+      if (result.carryoverDraft) expect(result.carryoverDraft.adaptiveAmounts).toEqual(result.optimization.amounts);
+    }
+    expect(writes).toBe(0);
+
     const stale = await rpc.request("tools/call", {
       name: "fitia-gainer-carryover-update",
       arguments: { action: "save", draft: { ...source.carryoverDraft, configVersion: "0" }, confirm: false },

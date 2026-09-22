@@ -9,9 +9,10 @@ import {
   macroKeys,
   round,
 } from "../nutrition.ts";
+import { optimizeAdaptive } from "./adaptive.ts";
 import { type CarryoverContext, carryoverContext, planningDay } from "./carryover.ts";
 import { greenRanges, optimizeGainer } from "./optimization.ts";
-import { portionNutrition, roundedMacros as rounded, scaleMacros } from "./portion.ts";
+import { amountsNutrition, drySolidsG, portionNutrition, roundedMacros as rounded, scaleMacros } from "./portion.ts";
 import {
   baseMixNutrition,
   type GainerConfig,
@@ -57,6 +58,7 @@ function calculateBatch(input: GainerInput, config: GainerConfig, day: DaySummar
       "An explicit target from 0 to 20000 kcal requires mode=calories.",
       "Use fitia_optimal without a target to budget against Fitia.",
     );
+  const fitiaAware = mode !== "calories";
   const resolved = !input.sweetener || input.sweetener === "auto" ? config.sweetenerInventory : input.sweetener;
   const ranges = greenRanges(day.goals);
   const context = {
@@ -95,9 +97,8 @@ function calculateBatch(input: GainerInput, config: GainerConfig, day: DaySummar
   const target = input.targetCaloriesKcal ?? day.remaining.caloriesKcal;
   if (
     target === null ||
-    ((mode === "fitia_optimal" || input.targetCaloriesKcal === undefined) && !day.coverage.complete) ||
-    (mode === "fitia_optimal" &&
-      (!ranges || macroKeys.some((key) => day.remaining[key] === null || day.consumed[key] === null)))
+    ((fitiaAware || input.targetCaloriesKcal === undefined) && !day.coverage.complete) ||
+    (fitiaAware && (!ranges || macroKeys.some((key) => day.remaining[key] === null || day.consumed[key] === null)))
   )
     return {
       ...stop(
@@ -107,9 +108,11 @@ function calculateBatch(input: GainerInput, config: GainerConfig, day: DaySummar
       sweetener,
     };
   const optimization =
-    mode === "fitia_optimal" && ranges
-      ? optimizeGainer(day.consumed as Macros, ranges, sweetNutrition, practicalSweetNutrition)
-      : undefined;
+    mode === "fitia_adaptive" && ranges
+      ? optimizeAdaptive(day.consumed as Macros, ranges, sweetNutrition, practicalSweetNutrition, config.adaptive)
+      : mode === "fitia_optimal" && ranges
+        ? optimizeGainer(day.consumed as Macros, ranges, sweetNutrition, practicalSweetNutrition)
+        : undefined;
   const budget = optimization?.maxAdditionalCaloriesKcal ?? target;
   if (optimization?.outcome === "not_needed")
     return { ...stop("not_recommended", optimization.reason), targetCaloriesKcal: target, sweetener, optimization };
@@ -140,12 +143,15 @@ function calculateBatch(input: GainerInput, config: GainerConfig, day: DaySummar
     };
   const scale = optimization?.scaleFactor ?? (target - sweetNutrition.caloriesKcal) / baseMixNutrition.caloriesKcal;
   const limitingFactors = optimization?.outcome === "limited_by_calories" ? ["caloriesKcal"] : [];
+  const adaptiveAmounts = optimization?.mode === "fitia_adaptive" ? optimization.amounts : null;
+  const amount = (id: (typeof gainerRecipe.ingredients)[number]["id"], base: number) =>
+    adaptiveAmounts?.[id] ?? base * scale;
   const ingredients = gainerRecipe.ingredients.map((i) => ({
     id: i.id,
     name: i.name,
     ...(i.unit === "g"
-      ? { exactG: i.amount * scale, practicalG: Math.round(i.amount * scale) }
-      : { exactMl: i.amount * scale, practicalMl: Math.round(i.amount * scale) }),
+      ? { exactG: amount(i.id, i.amount), practicalG: Math.round(amount(i.id, i.amount)) }
+      : { exactMl: amount(i.id, i.amount), practicalMl: Math.round(amount(i.id, i.amount)) }),
   }));
   if (scale <= 0 || !ingredients.some((i) => "practicalG" in i && i.practicalG > 0))
     return {
@@ -157,12 +163,20 @@ function calculateBatch(input: GainerInput, config: GainerConfig, day: DaySummar
       sweetener,
       ...(optimization && { optimization }),
     };
-  const { exact, practical } = portionNutrition(scale, sweetNutrition, practicalSweetNutrition);
+  const { exact, practical } = adaptiveAmounts
+    ? {
+        exact: amountsNutrition(adaptiveAmounts, sweetNutrition),
+        practical: amountsNutrition(adaptiveAmounts, practicalSweetNutrition),
+      }
+    : portionNutrition(scale, sweetNutrition, practicalSweetNutrition);
+  const waterMl = adaptiveAmounts
+    ? drySolidsG(adaptiveAmounts) * config.adaptive.waterMlPerDryGram
+    : gainerRecipe.waterMl * scale;
   let pen = 0,
     practicalPen = 0;
   for (const i of gainerRecipe.ingredients) {
-    pen += (i.amount * scale * i.price.pen) / i.price.packageAmount;
-    practicalPen += (Math.round(i.amount * scale) * i.price.pen) / i.price.packageAmount;
+    pen += (amount(i.id, i.amount) * i.price.pen) / i.price.packageAmount;
+    practicalPen += (Math.round(amount(i.id, i.amount)) * i.price.pen) / i.price.packageAmount;
   }
   const projection = project(day, exact),
     practicalProjection = project(day, practical);
@@ -206,12 +220,13 @@ function calculateBatch(input: GainerInput, config: GainerConfig, day: DaySummar
     sweetener,
     baseMix: {
       scaleFactor: scale,
+      ...(adaptiveAmounts && { proportions: "adaptive", scaleFactorBasis: "calorie_equivalent_only" }),
       availableCaloriesKcal: round(budget - sweetNutrition.caloriesKcal),
       caloriesKcal: round(baseMixNutrition.caloriesKcal * scale),
       limitingFactors,
     },
     ingredients,
-    water: { exactMl: gainerRecipe.waterMl * scale, practicalMl: Math.round((gainerRecipe.waterMl * scale) / 10) * 10 },
+    water: { exactMl: waterMl, practicalMl: Math.round(waterMl / 10) * 10 },
     creatineG: gainerRecipe.creatineG,
     nutrition: exact,
     practicalNutrition: practical,
@@ -231,13 +246,13 @@ function calculateBatch(input: GainerInput, config: GainerConfig, day: DaySummar
     warnings,
     suggestedMealLog: {
       date: input.date,
-      name: `${gainerRecipe.name} (${resolved}, rounded serving)`,
+      name: `${gainerRecipe.name}${adaptiveAmounts ? " adaptive" : ""} (${resolved}, rounded serving)`,
       ...practical,
       confirm: false,
     },
     exactMealLog: {
       date: input.date,
-      name: `${gainerRecipe.name} (${resolved}, exact serving)`,
+      name: `${gainerRecipe.name}${adaptiveAmounts ? " adaptive" : ""} (${resolved}, exact serving)`,
       ...exact,
       confirm: false,
     },
@@ -248,7 +263,7 @@ function calculateBatch(input: GainerInput, config: GainerConfig, day: DaySummar
 function calculateServing(input: GainerInput, config: GainerConfig, day: DaySummary) {
   const result = calculateBatch(input, config, day);
   if (!("practicalNutrition" in result)) return result;
-  if (result.mode !== "fitia_optimal" || result.practicalNutrition.caloriesKcal <= config.maxNightCaloriesKcal)
+  if (result.mode === "calories" || result.practicalNutrition.caloriesKcal <= config.maxNightCaloriesKcal)
     return { ...result, servingStrategy: "single_serving" as const };
   const draft: CarryoverDraft = {
     sourceDate: input.date,
@@ -256,6 +271,9 @@ function calculateServing(input: GainerInput, config: GainerConfig, day: DaySumm
     scaleFactor: result.baseMix.scaleFactor,
     sweetener: result.sweetener.mode,
     nightPercent: nightPercentage(result.practicalNutrition, config, day),
+    ...(result.optimization?.mode === "fitia_adaptive" && result.optimization.amounts
+      ? { adaptiveAmounts: result.optimization.amounts }
+      : {}),
   };
   const plan = makeCarryoverPlan(draft, config);
   const nightProjection = project(day, plan.nightPortion.nutrition);
@@ -311,7 +329,7 @@ export function calculateGainer(
   carryover: CarryoverContext = carryoverContext([], day, null, ""),
 ) {
   const plannedDay = planningDay(day, carryover);
-  const optimal = (input.mode ?? config.defaultMode) === "fitia_optimal";
+  const optimal = (input.mode ?? config.defaultMode) !== "calories";
   const result = calculateServing(input, config, optimal ? plannedDay : day);
   const fullNutrition = "practicalNutrition" in result ? result.practicalNutrition : emptyMacros();
   const todayNutrition = "nightPortion" in result ? result.nightPortion.nutrition : fullNutrition;
@@ -331,7 +349,7 @@ export function calculateGainer(
     excludedCarryoverFromPlanning: carryover.excludedCarryoverFromPlanning,
     effectiveProjection: project(plannedDay, fullNutrition),
     fitiaProjection: project(day, todayNutrition),
-    planningBasis: `Registered Fitia totals include ${carryover.excludedCarryoverFromPlanning.caloriesKcal} kcal from verified carryovers with earlier source dates${sourceDates.length ? ` (${sourceDates.join(", ")})` : ""}. These are excluded from the ${day.date} planning budget. Unregistered pending portions reserve ${carryover.plannedNutrition.caloriesKcal} kcal once. ${optimal ? "fitia_optimal uses planningConsumed." : "calories mode retains its explicit target or real Fitia calorie gap; planningConsumed is context only."}`,
+    planningBasis: `Registered Fitia totals include ${carryover.excludedCarryoverFromPlanning.caloriesKcal} kcal from verified carryovers with earlier source dates${sourceDates.length ? ` (${sourceDates.join(", ")})` : ""}. These are excluded from the ${day.date} planning budget. Unregistered pending portions reserve ${carryover.plannedNutrition.caloriesKcal} kcal once. ${optimal ? `${input.mode ?? config.defaultMode} uses planningConsumed.` : "calories mode retains its explicit target or real Fitia calorie gap; planningConsumed is context only."}`,
     projectionScope: `projection/practicalProjection describe the full exact/practical batch on the ${optimal ? "planning" : "registered Fitia"} basis; nightProjection uses that same basis for only tonight. effectiveProjection attributes the full practical batch to its source date using planningConsumed. fitiaProjection adds only today's practical serving (the night fraction for a split) to registeredConsumed; it excludes unregistered pending portions.`,
     ...(carryover.items.length ? { carryover } : {}),
   };

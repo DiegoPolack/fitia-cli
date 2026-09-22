@@ -6,6 +6,7 @@ import {
   type GainerConfigSnapshot,
   type GainerConfigStore,
   gainerConfigPatch,
+  mergeGainerConfig,
   parseGainerConfig,
 } from "../gainer-config.ts";
 import { type DatabaseRunner, neonDatabase } from "./sessions.ts";
@@ -42,7 +43,7 @@ export class GainerConfigRepository implements GainerConfigStore {
     if (!Object.keys(validated).length)
       throw new CliError("EMPTY_CONFIG_PATCH", "No configuration changes supplied.", "Specify at least one setting.");
     const before = await this.get();
-    const after = parseGainerConfig({ ...before.config, ...validated });
+    const after = parseGainerConfig(mergeGainerConfig(before.config, validated));
     const fieldsChanged = Object.keys(validated).filter(
       (key) =>
         JSON.stringify(before.config[key as keyof typeof after]) !== JSON.stringify(after[key as keyof typeof after]),
