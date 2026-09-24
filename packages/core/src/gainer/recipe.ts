@@ -1,12 +1,26 @@
 import { emptyMacros, type Macros, macroKeys } from "../nutrition.ts";
+import { defaultRecipeProfiles, type ProfileId, type RecipeProfiles } from "./profiles.ts";
 
 export const sweetenerModes = ["both", "honey_only", "stevia_only", "none"] as const;
 export type SweetenerInventory = "unknown" | (typeof sweetenerModes)[number];
 export type SweetenerMode = "auto" | (typeof sweetenerModes)[number];
 export const gainerModes = ["calories", "fitia_optimal", "fitia_adaptive"] as const;
 export type GainerMode = (typeof gainerModes)[number];
+export const adaptiveMainIds = ["quaker_oats", "anchor", "nestum", "seven_cereals"] as const;
+export const adaptiveDerivedIds = ["maca", "cocoa", "cinnamon", "vanilla"] as const;
+export type AdaptiveMainId = (typeof adaptiveMainIds)[number];
+export type MainAmounts = Record<AdaptiveMainId, number>;
+export const proportionalAdaptiveDefaults = {
+  strategy: "proportional_v2" as const,
+  ingredientDeviation: { quaker_oats: 0.3, anchor: 0.3, nestum: 0.3, seven_cereals: 0.3 },
+};
 export interface AdaptiveConfig {
-  bounds: Record<GainerIngredientId, { minFactor: number; maxFactor: number }>;
+  strategy?: "legacy_v1" | "proportional_v2";
+  ingredientDeviation?: Partial<Record<AdaptiveMainId, number>>;
+  waterMlPerMainDryGram?: number;
+  bounds: Record<GainerIngredientId, { minFactor: number; maxFactor: number }> & {
+    maltodex?: { minFactor: number; maxFactor: number };
+  };
   deviationWeight: number;
   metricWeights: Macros;
   alreadyHighMultipliers: Macros;
@@ -20,6 +34,8 @@ export interface HoneyProfile {
   per100G: Macros;
 }
 export interface GainerConfig {
+  activeProfile: ProfileId;
+  recipeProfiles: RecipeProfiles;
   sweetenerInventory: SweetenerInventory;
   defaultMode: GainerMode;
   honeyGramsPerTablespoon: number;
@@ -29,16 +45,28 @@ export interface GainerConfig {
   adaptive: AdaptiveConfig;
 }
 
+export const legacyIngredientIds = [
+  "quaker_oats",
+  "anchor",
+  "nestum",
+  "seven_cereals",
+  "maca",
+  "cocoa",
+  "cinnamon",
+  "vanilla",
+] as const;
+export type GainerIngredientId = (typeof legacyIngredientIds)[number];
 export interface GainerIngredient {
-  id: string;
+  id: GainerIngredientId | "maltodex";
   name: string;
   amount: number;
   unit: "g" | "ml";
   nutrition: Macros | null;
-  price: { pen: number; packageAmount: number };
+  price: { pen: number; packageAmount: number } | null;
 }
 
-// Canonical v1 recipe. Nutrition is for the listed base amount, WITHOUT sweeteners.
+// Frozen legacy_v1 definition. Change future profiles, never these historical values.
+// Nutrition is for the listed base amount, WITHOUT sweeteners.
 // Cinnamon/vanilla have no supplied nutrition label: excluded explicitly, never inferred.
 export const gainerRecipe = {
   id: "polack_labs_mass_gainer_v1",
@@ -119,10 +147,11 @@ export const gainerRecipe = {
   },
 } as const;
 
-export type GainerIngredientId = (typeof gainerRecipe.ingredients)[number]["id"];
 export type GainerAmounts = Record<GainerIngredientId, number>;
+export type RecipeAmounts = Partial<GainerAmounts & { maltodex: number }>;
 
 export function defaultAdaptiveConfig(): AdaptiveConfig {
+  // Frozen historical defaults; existing persisted overrides retain their meaning.
   return {
     // Absolute factors of the canonical base amounts, not of an optimized scale.
     bounds: {
@@ -159,12 +188,18 @@ export const baseMixCostPen = gainerRecipe.ingredients.reduce(
 // New users are unknown. The deployment owner's inventory is seeded by an identity-scoped migration.
 export function defaultGainerConfig(): GainerConfig {
   return {
+    activeProfile: "legacy_v1",
+    recipeProfiles: defaultRecipeProfiles(),
     sweetenerInventory: "unknown",
     defaultMode: "fitia_optimal",
     honeyGramsPerTablespoon: 20,
     preferredNightCaloriesKcal: 700,
     maxNightCaloriesKcal: 750,
-    adaptive: defaultAdaptiveConfig(),
+    adaptive: {
+      ...defaultAdaptiveConfig(),
+      ...proportionalAdaptiveDefaults,
+      ingredientDeviation: { ...proportionalAdaptiveDefaults.ingredientDeviation },
+    },
     honeyProfile: {
       source: "standard_reference",
       label: "Generic honey reference; replace with the actual product label",

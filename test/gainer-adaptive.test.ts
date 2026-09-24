@@ -2,13 +2,25 @@ import { expect, test } from "bun:test";
 import { adaptiveSearchPolicy } from "@fitia/core/gainer/adaptive";
 import { calculateGainer } from "@fitia/core/gainer/calculator";
 import { carryoverContext, planningDay } from "@fitia/core/gainer/carryover";
-import { defaultGainerConfig, type GainerConfig, gainerRecipe, type SweetenerMode } from "@fitia/core/gainer/recipe";
+import {
+  defaultGainerConfig as currentGainerConfig,
+  type GainerConfig,
+  gainerRecipe,
+  type SweetenerMode,
+} from "@fitia/core/gainer/recipe";
 import { makeCarryoverPlan } from "@fitia/core/gainer/serving";
 import { difference, emptyMacros, type Macros, macroKeys, round, summarizeDay } from "@fitia/core/nutrition";
 import { carryoverDraftSchema } from "../apps/mcp/src/gainer-carryover.ts";
 import { mergeGainerConfig, parseGainerConfig } from "../apps/mcp/src/gainer-config.ts";
 
 const date = "2026-09-17";
+// Preserve every original adaptive assertion against the explicitly selectable
+// historical strategy. The proportional_v2 contract has its own full suite.
+function defaultGainerConfig() {
+  const config = currentGainerConfig();
+  config.adaptive.strategy = "legacy_v1";
+  return config;
+}
 const goals = { caloriesKcal: 3000, proteinG: 110, carbsG: 400, fatG: 90 };
 const imbalanced = { caloriesKcal: 2400, proteinG: 150, carbsG: 200, fatG: 120 };
 function day(consumed: Macros) {
@@ -122,7 +134,12 @@ test("all green, near calorie ceiling, unknown inventory and excessive honey ret
 test("configuration bounds and global limits are enforced after rounding, with compatible deep defaults", () => {
   const config = parseGainerConfig({
     sweetenerInventory: "honey_only",
-    adaptive: { bounds: { anchor: { minFactor: 0, maxFactor: 0 } }, maxBatchCaloriesKcal: 400, maxDrySolidsG: 105 },
+    adaptive: {
+      strategy: "legacy_v1",
+      bounds: { anchor: { minFactor: 0, maxFactor: 0 } },
+      maxBatchCaloriesKcal: 400,
+      maxDrySolidsG: 105,
+    },
   });
   expect(config.defaultMode).toBe("fitia_optimal");
   const result = drink(calculate(imbalanced, "none", config));
@@ -142,7 +159,7 @@ test("configuration bounds and global limits are enforced after rounding, with c
     { metricWeights: { carbsG: Number.NaN } },
     { bounds: { unknown_ingredient: { minFactor: 0, maxFactor: 1 } } },
   ])
-    expect(() => parseGainerConfig({ adaptive })).toThrow();
+    expect(() => parseGainerConfig({ adaptive: { ...adaptive, strategy: "legacy_v1" } })).toThrow();
 });
 
 test("deterministic bounded work, no input mutations, default fixed mode unchanged by adaptive settings", () => {

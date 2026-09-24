@@ -1,6 +1,6 @@
 import { emptyMacros, type Macros, type MaybeMacros, macroKeys, round } from "../nutrition.ts";
-import { portionNutrition } from "./portion.ts";
-import { baseMixNutrition, gainerRecipe } from "./recipe.ts";
+import { fitsProfile, portionNutrition, scaledAmounts } from "./portion.ts";
+import { legacyRuntimeRecipe } from "./profiles.ts";
 
 // Explicit MCP convention, not inferred from Fitia's UI. Internal policy, not user preferences.
 export const GREEN_RANGE_LOWER = 0.9;
@@ -81,7 +81,14 @@ export function scoreGainer(
   };
 }
 
-export function optimizeGainer(consumed: Macros, ranges: GreenRanges, sweetener: Macros, practicalSweetener: Macros) {
+export function optimizeGainer(
+  consumed: Macros,
+  ranges: GreenRanges,
+  sweetener: Macros,
+  practicalSweetener: Macros,
+  recipe = legacyRuntimeRecipe(),
+) {
+  const baseMixNutrition = recipe.baseNutrition;
   const before = states(consumed, ranges);
   const maxAdditionalCalories = Math.max(0, ranges.caloriesKcal.max - consumed.caloriesKcal);
   const maxScale = Math.max(0, (maxAdditionalCalories - sweetener.caloriesKcal) / baseMixNutrition.caloriesKcal);
@@ -93,7 +100,7 @@ export function optimizeGainer(consumed: Macros, ranges: GreenRanges, sweetener:
   const add = (scale: number) => {
     if (scale > 0 && scale <= maxScale) candidates.add(scale);
   };
-  const nutritionIngredients = gainerRecipe.ingredients.filter((i) => i.nutrition);
+  const nutritionIngredients = recipe.ingredients.filter((i) => i.nutrition);
   const breakpoints = [maxScale];
   for (const key of macroKeys)
     for (const bound of [ranges[key].min, ranges[key].max]) {
@@ -114,7 +121,12 @@ export function optimizeGainer(consumed: Macros, ranges: GreenRanges, sweetener:
   let feasibleCandidates = 1;
   for (const scale of [...candidates].sort((a, b) => a - b)) {
     if (!nutritionIngredients.some((i) => Math.round(i.amount * scale) > 0)) continue;
-    const { exact, practical } = portionNutrition(scale, sweetener, practicalSweetener);
+    const { exact, practical } = portionNutrition(scale, sweetener, practicalSweetener, recipe);
+    if (
+      !fitsProfile(scaledAmounts(scale, recipe), practical, recipe) ||
+      (recipe.profileId !== "legacy_v1" && exact.caloriesKcal > recipe.adaptive.maxBatchCaloriesKcal)
+    )
+      continue;
     // Both representations must respect the calorie ceiling; never rely on an overshoot warning to pass.
     if (
       Math.max(exact.caloriesKcal, practical.caloriesKcal) >
@@ -137,7 +149,7 @@ export function optimizeGainer(consumed: Macros, ranges: GreenRanges, sweetener:
   const nextScale = Math.min(
     ...nutritionIngredients.map((i) => (Math.round(i.amount * best.scale) + 0.5) / i.amount + 1e-10),
   );
-  const next = portionNutrition(nextScale, sweetener, practicalSweetener);
+  const next = portionNutrition(nextScale, sweetener, practicalSweetener, recipe);
   const calorieLimited =
     stillLow &&
     Math.max(next.exact.caloriesKcal, next.practical.caloriesKcal) >

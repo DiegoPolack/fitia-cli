@@ -1,0 +1,3049 @@
+{
+  "baselineCommit": "7dce5152e0028ac8fe03f9f125e7d5b2fcac03f7",
+  "fixtures": [
+    {
+      "input": {
+        "date": "2026-09-23",
+        "mode": "calories",
+        "sweetener": "both"
+      },
+      "day": {
+        "date": "2026-09-23",
+        "updateTime": "frozen-legacy-snapshot",
+        "goals": {
+          "caloriesKcal": 3000,
+          "proteinG": 110,
+          "carbsG": 400,
+          "fatG": 90
+        },
+        "consumed": {
+          "caloriesKcal": 1800,
+          "proteinG": 70,
+          "carbsG": 200,
+          "fatG": 50
+        },
+        "remaining": {
+          "caloriesKcal": 1200,
+          "proteinG": 40,
+          "carbsG": 200,
+          "fatG": 40
+        },
+        "knownConsumed": {
+          "caloriesKcal": 0,
+          "proteinG": 0,
+          "carbsG": 0,
+          "fatG": 0
+        },
+        "meals": [],
+        "coverage": {
+          "complete": true,
+          "eatenEntries": 0,
+          "plannedEntries": 0,
+          "unknownStateEntries": 0,
+          "unknownEntries": [],
+          "calorieCheck": "matches",
+          "cachedNutrientsStatus": "absent"
+        },
+        "warnings": []
+      },
+      "configPatch": {},
+      "sha256": "099e472753bc95674759a2f274a4bba6a70128b01467c74e622e4fe1765a480f"
+    },
+    {
+      "input": {
+        "date": "2026-09-23",
+        "mode": "calories",
+        "sweetener": "honey_only"
+      },
+      "day": {
+        "date": "2026-09-23",
+        "updateTime": "frozen-legacy-snapshot",
+        "goals": {
+          "caloriesKcal": 3000,
+          "proteinG": 110,
+          "carbsG": 400,
+          "fatG": 90
+        },
+        "consumed": {
+          "caloriesKcal": 1800,
+          "proteinG": 70,
+          "carbsG": 200,
+          "fatG": 50
+        },
+        "remaining": {
+          "caloriesKcal": 1200,
+          "proteinG": 40,
+          "carbsG": 200,
+          "fatG": 40
+        },
+        "knownConsumed": {
+          "caloriesKcal": 0,
+          "proteinG": 0,
+          "carbsG": 0,
+          "fatG": 0
+        },
+        "meals": [],
+        "coverage": {
+          "complete": true,
+          "eatenEntries": 0,
+          "plannedEntries": 0,
+          "unknownStateEntries": 0,
+          "unknownEntries": [],
+          "calorieCheck": "matches",
+          "cachedNutrientsStatus": "absent"
+        },
+        "warnings": []
+      },
+      "configPatch": {},
+      "sha256": "0ffc2c88da80afe964de2ae012e086c7af651277b4adf340825eeaf32150521f"
+    },
+    {
+      "input": {
+        "date": "2026-09-23",
+        "mode": "calories",
+        "sweetener": "stevia_only"
+      },
+      "day": {
+        "date": "2026-09-23",
+        "updateTime": "frozen-legacy-snapshot",
+        "goals": {
+          "caloriesKcal": 3000,
+          "proteinG": 110,
+          "carbsG": 400,
+          "fatG": 90
+        },
+        "consumed": {
+          "caloriesKcal": 1800,
+          "proteinG": 70,
+          "carbsG": 200,
+          "fatG": 50
+        },
+        "remaining": {
+          "caloriesKcal": 1200,
+          "proteinG": 40,
+          "carbsG": 200,
+          "fatG": 40
+        },
+        "knownConsumed": {
+          "caloriesKcal": 0,
+          "proteinG": 0,
+          "carbsG": 0,
+          "fatG": 0
+        },
+        "meals": [],
+        "coverage": {
+          "complete": true,
+          "eatenEntries": 0,
+          "plannedEntries": 0,
+          "unknownStateEntries": 0,
+          "unknownEntries": [],
+          "calorieCheck": "matches",
+          "cachedNutrientsStatus": "absent"
+        },
+        "warnings": []
+      },
+      "configPatch": {},
+      "sha256": "cef7d91a7b2c151117a4f426f819dab25ae848e4ab1de4d805b1e0df03e6932d"
+    },
+    {
+      "input": {
+        "date": "2026-09-23",
+        "mode": "calories",
+        "sweetener": "none"
+      },
+      "day": {
+        "date": "2026-09-23",
+        "updateTime": "frozen-legacy-snapshot",
+        "goals": {
+          "caloriesKcal": 3000,
+          "proteinG": 110,
+          "carbsG": 400,
+          "fatG": 90
+        },
+        "consumed": {
+          "caloriesKcal": 1800,
+          "proteinG": 70,
+          "carbsG": 200,
+          "fatG": 50
+        },
+        "remaining": {
+          "caloriesKcal": 1200,
+          "proteinG": 40,
+          "carbsG": 200,
+          "fatG": 40
+        },
+        "knownConsumed": {
+          "caloriesKcal": 0,
+          "proteinG": 0,
+          "carbsG": 0,
+          "fatG": 0
+        },
+        "meals": [],
+        "coverage": {
+          "complete": true,
+          "eatenEntries": 0,
+          "plannedEntries": 0,
+          "unknownStateEntries": 0,
+          "unknownEntries": [],
+          "calorieCheck": "matches",
+          "cachedNutrientsStatus": "absent"
+        },
+        "warnings": []
+      },
+      "configPatch": {},
+      "sha256": "2f764749a8b5d72f5d6ebbb2f2847f68e2e71bd20edda1b9e6ad3169646de8a4"
+    },
+    {
+      "input": {
+        "date": "2026-09-23",
+        "mode": "fitia_optimal",
+        "sweetener": "both"
+      },
+      "day": {
+        "date": "2026-09-23",
+        "updateTime": "frozen-legacy-snapshot",
+        "goals": {
+          "caloriesKcal": 3000,
+          "proteinG": 110,
+          "carbsG": 400,
+          "fatG": 90
+        },
+        "consumed": {
+          "caloriesKcal": 1800,
+          "proteinG": 70,
+          "carbsG": 200,
+          "fatG": 50
+        },
+        "remaining": {
+          "caloriesKcal": 1200,
+          "proteinG": 40,
+          "carbsG": 200,
+          "fatG": 40
+        },
+        "knownConsumed": {
+          "caloriesKcal": 0,
+          "proteinG": 0,
+          "carbsG": 0,
+          "fatG": 0
+        },
+        "meals": [],
+        "coverage": {
+          "complete": true,
+          "eatenEntries": 0,
+          "plannedEntries": 0,
+          "unknownStateEntries": 0,
+          "unknownEntries": [],
+          "calorieCheck": "matches",
+          "cachedNutrientsStatus": "absent"
+        },
+        "warnings": []
+      },
+      "configPatch": {},
+      "sha256": "927667b170494f60d87d22527696ee4bbd023cbab4c972bd8ae3f7380d038ed6"
+    },
+    {
+      "input": {
+        "date": "2026-09-23",
+        "mode": "fitia_optimal",
+        "sweetener": "honey_only"
+      },
+      "day": {
+        "date": "2026-09-23",
+        "updateTime": "frozen-legacy-snapshot",
+        "goals": {
+          "caloriesKcal": 3000,
+          "proteinG": 110,
+          "carbsG": 400,
+          "fatG": 90
+        },
+        "consumed": {
+          "caloriesKcal": 1800,
+          "proteinG": 70,
+          "carbsG": 200,
+          "fatG": 50
+        },
+        "remaining": {
+          "caloriesKcal": 1200,
+          "proteinG": 40,
+          "carbsG": 200,
+          "fatG": 40
+        },
+        "knownConsumed": {
+          "caloriesKcal": 0,
+          "proteinG": 0,
+          "carbsG": 0,
+          "fatG": 0
+        },
+        "meals": [],
+        "coverage": {
+          "complete": true,
+          "eatenEntries": 0,
+          "plannedEntries": 0,
+          "unknownStateEntries": 0,
+          "unknownEntries": [],
+          "calorieCheck": "matches",
+          "cachedNutrientsStatus": "absent"
+        },
+        "warnings": []
+      },
+      "configPatch": {},
+      "sha256": "633e5f6e5604547be2826e81606aa4005c24bbe000819a8be80fa859e44b2687"
+    },
+    {
+      "input": {
+        "date": "2026-09-23",
+        "mode": "fitia_optimal",
+        "sweetener": "stevia_only"
+      },
+      "day": {
+        "date": "2026-09-23",
+        "updateTime": "frozen-legacy-snapshot",
+        "goals": {
+          "caloriesKcal": 3000,
+          "proteinG": 110,
+          "carbsG": 400,
+          "fatG": 90
+        },
+        "consumed": {
+          "caloriesKcal": 1800,
+          "proteinG": 70,
+          "carbsG": 200,
+          "fatG": 50
+        },
+        "remaining": {
+          "caloriesKcal": 1200,
+          "proteinG": 40,
+          "carbsG": 200,
+          "fatG": 40
+        },
+        "knownConsumed": {
+          "caloriesKcal": 0,
+          "proteinG": 0,
+          "carbsG": 0,
+          "fatG": 0
+        },
+        "meals": [],
+        "coverage": {
+          "complete": true,
+          "eatenEntries": 0,
+          "plannedEntries": 0,
+          "unknownStateEntries": 0,
+          "unknownEntries": [],
+          "calorieCheck": "matches",
+          "cachedNutrientsStatus": "absent"
+        },
+        "warnings": []
+      },
+      "configPatch": {},
+      "sha256": "722782595f8dbeb6d5286528d63439e05cf7e0bdb3b6a9f262bb3536e27d1189"
+    },
+    {
+      "input": {
+        "date": "2026-09-23",
+        "mode": "fitia_optimal",
+        "sweetener": "none"
+      },
+      "day": {
+        "date": "2026-09-23",
+        "updateTime": "frozen-legacy-snapshot",
+        "goals": {
+          "caloriesKcal": 3000,
+          "proteinG": 110,
+          "carbsG": 400,
+          "fatG": 90
+        },
+        "consumed": {
+          "caloriesKcal": 1800,
+          "proteinG": 70,
+          "carbsG": 200,
+          "fatG": 50
+        },
+        "remaining": {
+          "caloriesKcal": 1200,
+          "proteinG": 40,
+          "carbsG": 200,
+          "fatG": 40
+        },
+        "knownConsumed": {
+          "caloriesKcal": 0,
+          "proteinG": 0,
+          "carbsG": 0,
+          "fatG": 0
+        },
+        "meals": [],
+        "coverage": {
+          "complete": true,
+          "eatenEntries": 0,
+          "plannedEntries": 0,
+          "unknownStateEntries": 0,
+          "unknownEntries": [],
+          "calorieCheck": "matches",
+          "cachedNutrientsStatus": "absent"
+        },
+        "warnings": []
+      },
+      "configPatch": {},
+      "sha256": "0b470712df493dfe93520ee94187525462c237a5101474e4e59fd158e6923c77"
+    },
+    {
+      "input": {
+        "date": "2026-09-23",
+        "mode": "fitia_adaptive",
+        "sweetener": "both"
+      },
+      "day": {
+        "date": "2026-09-23",
+        "updateTime": "frozen-legacy-snapshot",
+        "goals": {
+          "caloriesKcal": 3000,
+          "proteinG": 110,
+          "carbsG": 400,
+          "fatG": 90
+        },
+        "consumed": {
+          "caloriesKcal": 1800,
+          "proteinG": 70,
+          "carbsG": 200,
+          "fatG": 50
+        },
+        "remaining": {
+          "caloriesKcal": 1200,
+          "proteinG": 40,
+          "carbsG": 200,
+          "fatG": 40
+        },
+        "knownConsumed": {
+          "caloriesKcal": 0,
+          "proteinG": 0,
+          "carbsG": 0,
+          "fatG": 0
+        },
+        "meals": [],
+        "coverage": {
+          "complete": true,
+          "eatenEntries": 0,
+          "plannedEntries": 0,
+          "unknownStateEntries": 0,
+          "unknownEntries": [],
+          "calorieCheck": "matches",
+          "cachedNutrientsStatus": "absent"
+        },
+        "warnings": []
+      },
+      "configPatch": {},
+      "sha256": "423220211958266374561a3332ee0176af284e01e3697176cdd37b01f7abd782"
+    },
+    {
+      "input": {
+        "date": "2026-09-23",
+        "mode": "fitia_adaptive",
+        "sweetener": "honey_only"
+      },
+      "day": {
+        "date": "2026-09-23",
+        "updateTime": "frozen-legacy-snapshot",
+        "goals": {
+          "caloriesKcal": 3000,
+          "proteinG": 110,
+          "carbsG": 400,
+          "fatG": 90
+        },
+        "consumed": {
+          "caloriesKcal": 1800,
+          "proteinG": 70,
+          "carbsG": 200,
+          "fatG": 50
+        },
+        "remaining": {
+          "caloriesKcal": 1200,
+          "proteinG": 40,
+          "carbsG": 200,
+          "fatG": 40
+        },
+        "knownConsumed": {
+          "caloriesKcal": 0,
+          "proteinG": 0,
+          "carbsG": 0,
+          "fatG": 0
+        },
+        "meals": [],
+        "coverage": {
+          "complete": true,
+          "eatenEntries": 0,
+          "plannedEntries": 0,
+          "unknownStateEntries": 0,
+          "unknownEntries": [],
+          "calorieCheck": "matches",
+          "cachedNutrientsStatus": "absent"
+        },
+        "warnings": []
+      },
+      "configPatch": {},
+      "sha256": "452e451d20ae44aab1fc661feeda7d7bfb710871d3e3f8fdd3f9f772cc36c24f"
+    },
+    {
+      "input": {
+        "date": "2026-09-23",
+        "mode": "fitia_adaptive",
+        "sweetener": "stevia_only"
+      },
+      "day": {
+        "date": "2026-09-23",
+        "updateTime": "frozen-legacy-snapshot",
+        "goals": {
+          "caloriesKcal": 3000,
+          "proteinG": 110,
+          "carbsG": 400,
+          "fatG": 90
+        },
+        "consumed": {
+          "caloriesKcal": 1800,
+          "proteinG": 70,
+          "carbsG": 200,
+          "fatG": 50
+        },
+        "remaining": {
+          "caloriesKcal": 1200,
+          "proteinG": 40,
+          "carbsG": 200,
+          "fatG": 40
+        },
+        "knownConsumed": {
+          "caloriesKcal": 0,
+          "proteinG": 0,
+          "carbsG": 0,
+          "fatG": 0
+        },
+        "meals": [],
+        "coverage": {
+          "complete": true,
+          "eatenEntries": 0,
+          "plannedEntries": 0,
+          "unknownStateEntries": 0,
+          "unknownEntries": [],
+          "calorieCheck": "matches",
+          "cachedNutrientsStatus": "absent"
+        },
+        "warnings": []
+      },
+      "configPatch": {},
+      "sha256": "5b0a1bd9683a3b044822055d8b10d0f8233e9dca23af3d5c949dc1bc95702a22"
+    },
+    {
+      "input": {
+        "date": "2026-09-23",
+        "mode": "fitia_adaptive",
+        "sweetener": "none"
+      },
+      "day": {
+        "date": "2026-09-23",
+        "updateTime": "frozen-legacy-snapshot",
+        "goals": {
+          "caloriesKcal": 3000,
+          "proteinG": 110,
+          "carbsG": 400,
+          "fatG": 90
+        },
+        "consumed": {
+          "caloriesKcal": 1800,
+          "proteinG": 70,
+          "carbsG": 200,
+          "fatG": 50
+        },
+        "remaining": {
+          "caloriesKcal": 1200,
+          "proteinG": 40,
+          "carbsG": 200,
+          "fatG": 40
+        },
+        "knownConsumed": {
+          "caloriesKcal": 0,
+          "proteinG": 0,
+          "carbsG": 0,
+          "fatG": 0
+        },
+        "meals": [],
+        "coverage": {
+          "complete": true,
+          "eatenEntries": 0,
+          "plannedEntries": 0,
+          "unknownStateEntries": 0,
+          "unknownEntries": [],
+          "calorieCheck": "matches",
+          "cachedNutrientsStatus": "absent"
+        },
+        "warnings": []
+      },
+      "configPatch": {},
+      "sha256": "c18d0f93be14231e537fd34873c6e79e55de57cf5f6299b47a2e216c1f27b8b2"
+    },
+    {
+      "input": {
+        "date": "2026-09-23",
+        "mode": "calories",
+        "sweetener": "both"
+      },
+      "day": {
+        "date": "2026-09-23",
+        "updateTime": "frozen-legacy-snapshot",
+        "goals": {
+          "caloriesKcal": 3000,
+          "proteinG": 110,
+          "carbsG": 400,
+          "fatG": 90
+        },
+        "consumed": {
+          "caloriesKcal": 2800,
+          "proteinG": 150,
+          "carbsG": 320,
+          "fatG": 120
+        },
+        "remaining": {
+          "caloriesKcal": 200,
+          "proteinG": -40,
+          "carbsG": 80,
+          "fatG": -30
+        },
+        "knownConsumed": {
+          "caloriesKcal": 0,
+          "proteinG": 0,
+          "carbsG": 0,
+          "fatG": 0
+        },
+        "meals": [],
+        "coverage": {
+          "complete": true,
+          "eatenEntries": 0,
+          "plannedEntries": 0,
+          "unknownStateEntries": 0,
+          "unknownEntries": [],
+          "calorieCheck": "matches",
+          "cachedNutrientsStatus": "absent"
+        },
+        "warnings": []
+      },
+      "configPatch": {},
+      "sha256": "6aebbe0d5bbb41de27a11e1aa1aaebe1e97aa3e2d800143d9d3a1529771295e7"
+    },
+    {
+      "input": {
+        "date": "2026-09-23",
+        "mode": "calories",
+        "sweetener": "honey_only"
+      },
+      "day": {
+        "date": "2026-09-23",
+        "updateTime": "frozen-legacy-snapshot",
+        "goals": {
+          "caloriesKcal": 3000,
+          "proteinG": 110,
+          "carbsG": 400,
+          "fatG": 90
+        },
+        "consumed": {
+          "caloriesKcal": 2800,
+          "proteinG": 150,
+          "carbsG": 320,
+          "fatG": 120
+        },
+        "remaining": {
+          "caloriesKcal": 200,
+          "proteinG": -40,
+          "carbsG": 80,
+          "fatG": -30
+        },
+        "knownConsumed": {
+          "caloriesKcal": 0,
+          "proteinG": 0,
+          "carbsG": 0,
+          "fatG": 0
+        },
+        "meals": [],
+        "coverage": {
+          "complete": true,
+          "eatenEntries": 0,
+          "plannedEntries": 0,
+          "unknownStateEntries": 0,
+          "unknownEntries": [],
+          "calorieCheck": "matches",
+          "cachedNutrientsStatus": "absent"
+        },
+        "warnings": []
+      },
+      "configPatch": {},
+      "sha256": "8fb1d02c70320c0b24126e871ba60a4ec514d7cd1eba98bc723b724b5a539f86"
+    },
+    {
+      "input": {
+        "date": "2026-09-23",
+        "mode": "calories",
+        "sweetener": "stevia_only"
+      },
+      "day": {
+        "date": "2026-09-23",
+        "updateTime": "frozen-legacy-snapshot",
+        "goals": {
+          "caloriesKcal": 3000,
+          "proteinG": 110,
+          "carbsG": 400,
+          "fatG": 90
+        },
+        "consumed": {
+          "caloriesKcal": 2800,
+          "proteinG": 150,
+          "carbsG": 320,
+          "fatG": 120
+        },
+        "remaining": {
+          "caloriesKcal": 200,
+          "proteinG": -40,
+          "carbsG": 80,
+          "fatG": -30
+        },
+        "knownConsumed": {
+          "caloriesKcal": 0,
+          "proteinG": 0,
+          "carbsG": 0,
+          "fatG": 0
+        },
+        "meals": [],
+        "coverage": {
+          "complete": true,
+          "eatenEntries": 0,
+          "plannedEntries": 0,
+          "unknownStateEntries": 0,
+          "unknownEntries": [],
+          "calorieCheck": "matches",
+          "cachedNutrientsStatus": "absent"
+        },
+        "warnings": []
+      },
+      "configPatch": {},
+      "sha256": "66f9e15d8915b604ef8cde549254be074b17ff6e8b48d86351b109ed54ac8620"
+    },
+    {
+      "input": {
+        "date": "2026-09-23",
+        "mode": "calories",
+        "sweetener": "none"
+      },
+      "day": {
+        "date": "2026-09-23",
+        "updateTime": "frozen-legacy-snapshot",
+        "goals": {
+          "caloriesKcal": 3000,
+          "proteinG": 110,
+          "carbsG": 400,
+          "fatG": 90
+        },
+        "consumed": {
+          "caloriesKcal": 2800,
+          "proteinG": 150,
+          "carbsG": 320,
+          "fatG": 120
+        },
+        "remaining": {
+          "caloriesKcal": 200,
+          "proteinG": -40,
+          "carbsG": 80,
+          "fatG": -30
+        },
+        "knownConsumed": {
+          "caloriesKcal": 0,
+          "proteinG": 0,
+          "carbsG": 0,
+          "fatG": 0
+        },
+        "meals": [],
+        "coverage": {
+          "complete": true,
+          "eatenEntries": 0,
+          "plannedEntries": 0,
+          "unknownStateEntries": 0,
+          "unknownEntries": [],
+          "calorieCheck": "matches",
+          "cachedNutrientsStatus": "absent"
+        },
+        "warnings": []
+      },
+      "configPatch": {},
+      "sha256": "15a5b813ced3eb7c76ed07743ba5337936c00465ec5947b48535819b1d6b65a4"
+    },
+    {
+      "input": {
+        "date": "2026-09-23",
+        "mode": "fitia_optimal",
+        "sweetener": "both"
+      },
+      "day": {
+        "date": "2026-09-23",
+        "updateTime": "frozen-legacy-snapshot",
+        "goals": {
+          "caloriesKcal": 3000,
+          "proteinG": 110,
+          "carbsG": 400,
+          "fatG": 90
+        },
+        "consumed": {
+          "caloriesKcal": 2800,
+          "proteinG": 150,
+          "carbsG": 320,
+          "fatG": 120
+        },
+        "remaining": {
+          "caloriesKcal": 200,
+          "proteinG": -40,
+          "carbsG": 80,
+          "fatG": -30
+        },
+        "knownConsumed": {
+          "caloriesKcal": 0,
+          "proteinG": 0,
+          "carbsG": 0,
+          "fatG": 0
+        },
+        "meals": [],
+        "coverage": {
+          "complete": true,
+          "eatenEntries": 0,
+          "plannedEntries": 0,
+          "unknownStateEntries": 0,
+          "unknownEntries": [],
+          "calorieCheck": "matches",
+          "cachedNutrientsStatus": "absent"
+        },
+        "warnings": []
+      },
+      "configPatch": {},
+      "sha256": "3f6e561c41c2d5a855989b2d9371ac7e996120aca9e5fbc0a50d95a3c6262cd0"
+    },
+    {
+      "input": {
+        "date": "2026-09-23",
+        "mode": "fitia_optimal",
+        "sweetener": "honey_only"
+      },
+      "day": {
+        "date": "2026-09-23",
+        "updateTime": "frozen-legacy-snapshot",
+        "goals": {
+          "caloriesKcal": 3000,
+          "proteinG": 110,
+          "carbsG": 400,
+          "fatG": 90
+        },
+        "consumed": {
+          "caloriesKcal": 2800,
+          "proteinG": 150,
+          "carbsG": 320,
+          "fatG": 120
+        },
+        "remaining": {
+          "caloriesKcal": 200,
+          "proteinG": -40,
+          "carbsG": 80,
+          "fatG": -30
+        },
+        "knownConsumed": {
+          "caloriesKcal": 0,
+          "proteinG": 0,
+          "carbsG": 0,
+          "fatG": 0
+        },
+        "meals": [],
+        "coverage": {
+          "complete": true,
+          "eatenEntries": 0,
+          "plannedEntries": 0,
+          "unknownStateEntries": 0,
+          "unknownEntries": [],
+          "calorieCheck": "matches",
+          "cachedNutrientsStatus": "absent"
+        },
+        "warnings": []
+      },
+      "configPatch": {},
+      "sha256": "b684916ad366c9abe92e75998b353795e3af5e4e49ba15b9bc745c7f4579c1c0"
+    },
+    {
+      "input": {
+        "date": "2026-09-23",
+        "mode": "fitia_optimal",
+        "sweetener": "stevia_only"
+      },
+      "day": {
+        "date": "2026-09-23",
+        "updateTime": "frozen-legacy-snapshot",
+        "goals": {
+          "caloriesKcal": 3000,
+          "proteinG": 110,
+          "carbsG": 400,
+          "fatG": 90
+        },
+        "consumed": {
+          "caloriesKcal": 2800,
+          "proteinG": 150,
+          "carbsG": 320,
+          "fatG": 120
+        },
+        "remaining": {
+          "caloriesKcal": 200,
+          "proteinG": -40,
+          "carbsG": 80,
+          "fatG": -30
+        },
+        "knownConsumed": {
+          "caloriesKcal": 0,
+          "proteinG": 0,
+          "carbsG": 0,
+          "fatG": 0
+        },
+        "meals": [],
+        "coverage": {
+          "complete": true,
+          "eatenEntries": 0,
+          "plannedEntries": 0,
+          "unknownStateEntries": 0,
+          "unknownEntries": [],
+          "calorieCheck": "matches",
+          "cachedNutrientsStatus": "absent"
+        },
+        "warnings": []
+      },
+      "configPatch": {},
+      "sha256": "bcf072b831c84d9310e760464c4f9ceb5829d7347b93b07cb22ab5f6e09ae2d9"
+    },
+    {
+      "input": {
+        "date": "2026-09-23",
+        "mode": "fitia_optimal",
+        "sweetener": "none"
+      },
+      "day": {
+        "date": "2026-09-23",
+        "updateTime": "frozen-legacy-snapshot",
+        "goals": {
+          "caloriesKcal": 3000,
+          "proteinG": 110,
+          "carbsG": 400,
+          "fatG": 90
+        },
+        "consumed": {
+          "caloriesKcal": 2800,
+          "proteinG": 150,
+          "carbsG": 320,
+          "fatG": 120
+        },
+        "remaining": {
+          "caloriesKcal": 200,
+          "proteinG": -40,
+          "carbsG": 80,
+          "fatG": -30
+        },
+        "knownConsumed": {
+          "caloriesKcal": 0,
+          "proteinG": 0,
+          "carbsG": 0,
+          "fatG": 0
+        },
+        "meals": [],
+        "coverage": {
+          "complete": true,
+          "eatenEntries": 0,
+          "plannedEntries": 0,
+          "unknownStateEntries": 0,
+          "unknownEntries": [],
+          "calorieCheck": "matches",
+          "cachedNutrientsStatus": "absent"
+        },
+        "warnings": []
+      },
+      "configPatch": {},
+      "sha256": "a0ef3d4d38f7a5cf733886a59d8346d016a79bc46f2078094674ef091ab326d6"
+    },
+    {
+      "input": {
+        "date": "2026-09-23",
+        "mode": "fitia_adaptive",
+        "sweetener": "both"
+      },
+      "day": {
+        "date": "2026-09-23",
+        "updateTime": "frozen-legacy-snapshot",
+        "goals": {
+          "caloriesKcal": 3000,
+          "proteinG": 110,
+          "carbsG": 400,
+          "fatG": 90
+        },
+        "consumed": {
+          "caloriesKcal": 2800,
+          "proteinG": 150,
+          "carbsG": 320,
+          "fatG": 120
+        },
+        "remaining": {
+          "caloriesKcal": 200,
+          "proteinG": -40,
+          "carbsG": 80,
+          "fatG": -30
+        },
+        "knownConsumed": {
+          "caloriesKcal": 0,
+          "proteinG": 0,
+          "carbsG": 0,
+          "fatG": 0
+        },
+        "meals": [],
+        "coverage": {
+          "complete": true,
+          "eatenEntries": 0,
+          "plannedEntries": 0,
+          "unknownStateEntries": 0,
+          "unknownEntries": [],
+          "calorieCheck": "matches",
+          "cachedNutrientsStatus": "absent"
+        },
+        "warnings": []
+      },
+      "configPatch": {},
+      "sha256": "894f79a539734454deed32172911666d865609e8fcd9beafc75d3bec245df063"
+    },
+    {
+      "input": {
+        "date": "2026-09-23",
+        "mode": "fitia_adaptive",
+        "sweetener": "honey_only"
+      },
+      "day": {
+        "date": "2026-09-23",
+        "updateTime": "frozen-legacy-snapshot",
+        "goals": {
+          "caloriesKcal": 3000,
+          "proteinG": 110,
+          "carbsG": 400,
+          "fatG": 90
+        },
+        "consumed": {
+          "caloriesKcal": 2800,
+          "proteinG": 150,
+          "carbsG": 320,
+          "fatG": 120
+        },
+        "remaining": {
+          "caloriesKcal": 200,
+          "proteinG": -40,
+          "carbsG": 80,
+          "fatG": -30
+        },
+        "knownConsumed": {
+          "caloriesKcal": 0,
+          "proteinG": 0,
+          "carbsG": 0,
+          "fatG": 0
+        },
+        "meals": [],
+        "coverage": {
+          "complete": true,
+          "eatenEntries": 0,
+          "plannedEntries": 0,
+          "unknownStateEntries": 0,
+          "unknownEntries": [],
+          "calorieCheck": "matches",
+          "cachedNutrientsStatus": "absent"
+        },
+        "warnings": []
+      },
+      "configPatch": {},
+      "sha256": "a1dc34aa7f6ca3b8cab1f2c1c29c646ea67045179f73c444c952a3bb91afdc7b"
+    },
+    {
+      "input": {
+        "date": "2026-09-23",
+        "mode": "fitia_adaptive",
+        "sweetener": "stevia_only"
+      },
+      "day": {
+        "date": "2026-09-23",
+        "updateTime": "frozen-legacy-snapshot",
+        "goals": {
+          "caloriesKcal": 3000,
+          "proteinG": 110,
+          "carbsG": 400,
+          "fatG": 90
+        },
+        "consumed": {
+          "caloriesKcal": 2800,
+          "proteinG": 150,
+          "carbsG": 320,
+          "fatG": 120
+        },
+        "remaining": {
+          "caloriesKcal": 200,
+          "proteinG": -40,
+          "carbsG": 80,
+          "fatG": -30
+        },
+        "knownConsumed": {
+          "caloriesKcal": 0,
+          "proteinG": 0,
+          "carbsG": 0,
+          "fatG": 0
+        },
+        "meals": [],
+        "coverage": {
+          "complete": true,
+          "eatenEntries": 0,
+          "plannedEntries": 0,
+          "unknownStateEntries": 0,
+          "unknownEntries": [],
+          "calorieCheck": "matches",
+          "cachedNutrientsStatus": "absent"
+        },
+        "warnings": []
+      },
+      "configPatch": {},
+      "sha256": "f17ac923ea07f372f46d0ab4944c45fa38d7fba6ac1e327ce9de291fec63615c"
+    },
+    {
+      "input": {
+        "date": "2026-09-23",
+        "mode": "fitia_adaptive",
+        "sweetener": "none"
+      },
+      "day": {
+        "date": "2026-09-23",
+        "updateTime": "frozen-legacy-snapshot",
+        "goals": {
+          "caloriesKcal": 3000,
+          "proteinG": 110,
+          "carbsG": 400,
+          "fatG": 90
+        },
+        "consumed": {
+          "caloriesKcal": 2800,
+          "proteinG": 150,
+          "carbsG": 320,
+          "fatG": 120
+        },
+        "remaining": {
+          "caloriesKcal": 200,
+          "proteinG": -40,
+          "carbsG": 80,
+          "fatG": -30
+        },
+        "knownConsumed": {
+          "caloriesKcal": 0,
+          "proteinG": 0,
+          "carbsG": 0,
+          "fatG": 0
+        },
+        "meals": [],
+        "coverage": {
+          "complete": true,
+          "eatenEntries": 0,
+          "plannedEntries": 0,
+          "unknownStateEntries": 0,
+          "unknownEntries": [],
+          "calorieCheck": "matches",
+          "cachedNutrientsStatus": "absent"
+        },
+        "warnings": []
+      },
+      "configPatch": {},
+      "sha256": "ee3e698a526e1c1c71b36e707e7b1d573f98e95ba8c187a41f85c36f049756b9"
+    },
+    {
+      "input": {
+        "date": "2026-09-23",
+        "mode": "calories",
+        "sweetener": "both"
+      },
+      "day": {
+        "date": "2026-09-23",
+        "updateTime": "frozen-legacy-snapshot",
+        "goals": {
+          "caloriesKcal": 3000,
+          "proteinG": 110,
+          "carbsG": 400,
+          "fatG": 90
+        },
+        "consumed": {
+          "caloriesKcal": 3292,
+          "proteinG": 105,
+          "carbsG": 320,
+          "fatG": 81
+        },
+        "remaining": {
+          "caloriesKcal": -292,
+          "proteinG": 5,
+          "carbsG": 80,
+          "fatG": 9
+        },
+        "knownConsumed": {
+          "caloriesKcal": 0,
+          "proteinG": 0,
+          "carbsG": 0,
+          "fatG": 0
+        },
+        "meals": [],
+        "coverage": {
+          "complete": true,
+          "eatenEntries": 0,
+          "plannedEntries": 0,
+          "unknownStateEntries": 0,
+          "unknownEntries": [],
+          "calorieCheck": "matches",
+          "cachedNutrientsStatus": "absent"
+        },
+        "warnings": []
+      },
+      "configPatch": {},
+      "sha256": "9a48fb7b5766a4141963ed23470876a8c4812a319bcbe4052aa4a858ecea3a85"
+    },
+    {
+      "input": {
+        "date": "2026-09-23",
+        "mode": "calories",
+        "sweetener": "honey_only"
+      },
+      "day": {
+        "date": "2026-09-23",
+        "updateTime": "frozen-legacy-snapshot",
+        "goals": {
+          "caloriesKcal": 3000,
+          "proteinG": 110,
+          "carbsG": 400,
+          "fatG": 90
+        },
+        "consumed": {
+          "caloriesKcal": 3292,
+          "proteinG": 105,
+          "carbsG": 320,
+          "fatG": 81
+        },
+        "remaining": {
+          "caloriesKcal": -292,
+          "proteinG": 5,
+          "carbsG": 80,
+          "fatG": 9
+        },
+        "knownConsumed": {
+          "caloriesKcal": 0,
+          "proteinG": 0,
+          "carbsG": 0,
+          "fatG": 0
+        },
+        "meals": [],
+        "coverage": {
+          "complete": true,
+          "eatenEntries": 0,
+          "plannedEntries": 0,
+          "unknownStateEntries": 0,
+          "unknownEntries": [],
+          "calorieCheck": "matches",
+          "cachedNutrientsStatus": "absent"
+        },
+        "warnings": []
+      },
+      "configPatch": {},
+      "sha256": "bccbabdae4edc8d0dae2ce556d28a08909c11ff03f1270dea47bb56fe4195b41"
+    },
+    {
+      "input": {
+        "date": "2026-09-23",
+        "mode": "calories",
+        "sweetener": "stevia_only"
+      },
+      "day": {
+        "date": "2026-09-23",
+        "updateTime": "frozen-legacy-snapshot",
+        "goals": {
+          "caloriesKcal": 3000,
+          "proteinG": 110,
+          "carbsG": 400,
+          "fatG": 90
+        },
+        "consumed": {
+          "caloriesKcal": 3292,
+          "proteinG": 105,
+          "carbsG": 320,
+          "fatG": 81
+        },
+        "remaining": {
+          "caloriesKcal": -292,
+          "proteinG": 5,
+          "carbsG": 80,
+          "fatG": 9
+        },
+        "knownConsumed": {
+          "caloriesKcal": 0,
+          "proteinG": 0,
+          "carbsG": 0,
+          "fatG": 0
+        },
+        "meals": [],
+        "coverage": {
+          "complete": true,
+          "eatenEntries": 0,
+          "plannedEntries": 0,
+          "unknownStateEntries": 0,
+          "unknownEntries": [],
+          "calorieCheck": "matches",
+          "cachedNutrientsStatus": "absent"
+        },
+        "warnings": []
+      },
+      "configPatch": {},
+      "sha256": "a438f0c5a297deeae2850b50943f3e2b7dea214c8c259a195190b5cc7f9c7418"
+    },
+    {
+      "input": {
+        "date": "2026-09-23",
+        "mode": "calories",
+        "sweetener": "none"
+      },
+      "day": {
+        "date": "2026-09-23",
+        "updateTime": "frozen-legacy-snapshot",
+        "goals": {
+          "caloriesKcal": 3000,
+          "proteinG": 110,
+          "carbsG": 400,
+          "fatG": 90
+        },
+        "consumed": {
+          "caloriesKcal": 3292,
+          "proteinG": 105,
+          "carbsG": 320,
+          "fatG": 81
+        },
+        "remaining": {
+          "caloriesKcal": -292,
+          "proteinG": 5,
+          "carbsG": 80,
+          "fatG": 9
+        },
+        "knownConsumed": {
+          "caloriesKcal": 0,
+          "proteinG": 0,
+          "carbsG": 0,
+          "fatG": 0
+        },
+        "meals": [],
+        "coverage": {
+          "complete": true,
+          "eatenEntries": 0,
+          "plannedEntries": 0,
+          "unknownStateEntries": 0,
+          "unknownEntries": [],
+          "calorieCheck": "matches",
+          "cachedNutrientsStatus": "absent"
+        },
+        "warnings": []
+      },
+      "configPatch": {},
+      "sha256": "bab6242906d70e1b0058a2e6d7b0133a3ad25f27731b032cac7ff057963265b6"
+    },
+    {
+      "input": {
+        "date": "2026-09-23",
+        "mode": "fitia_optimal",
+        "sweetener": "both"
+      },
+      "day": {
+        "date": "2026-09-23",
+        "updateTime": "frozen-legacy-snapshot",
+        "goals": {
+          "caloriesKcal": 3000,
+          "proteinG": 110,
+          "carbsG": 400,
+          "fatG": 90
+        },
+        "consumed": {
+          "caloriesKcal": 3292,
+          "proteinG": 105,
+          "carbsG": 320,
+          "fatG": 81
+        },
+        "remaining": {
+          "caloriesKcal": -292,
+          "proteinG": 5,
+          "carbsG": 80,
+          "fatG": 9
+        },
+        "knownConsumed": {
+          "caloriesKcal": 0,
+          "proteinG": 0,
+          "carbsG": 0,
+          "fatG": 0
+        },
+        "meals": [],
+        "coverage": {
+          "complete": true,
+          "eatenEntries": 0,
+          "plannedEntries": 0,
+          "unknownStateEntries": 0,
+          "unknownEntries": [],
+          "calorieCheck": "matches",
+          "cachedNutrientsStatus": "absent"
+        },
+        "warnings": []
+      },
+      "configPatch": {},
+      "sha256": "c56b1b91b422825d7ec6d9b7eb63cc0b503e3e1b2b06c93ba62dc9e28097b122"
+    },
+    {
+      "input": {
+        "date": "2026-09-23",
+        "mode": "fitia_optimal",
+        "sweetener": "honey_only"
+      },
+      "day": {
+        "date": "2026-09-23",
+        "updateTime": "frozen-legacy-snapshot",
+        "goals": {
+          "caloriesKcal": 3000,
+          "proteinG": 110,
+          "carbsG": 400,
+          "fatG": 90
+        },
+        "consumed": {
+          "caloriesKcal": 3292,
+          "proteinG": 105,
+          "carbsG": 320,
+          "fatG": 81
+        },
+        "remaining": {
+          "caloriesKcal": -292,
+          "proteinG": 5,
+          "carbsG": 80,
+          "fatG": 9
+        },
+        "knownConsumed": {
+          "caloriesKcal": 0,
+          "proteinG": 0,
+          "carbsG": 0,
+          "fatG": 0
+        },
+        "meals": [],
+        "coverage": {
+          "complete": true,
+          "eatenEntries": 0,
+          "plannedEntries": 0,
+          "unknownStateEntries": 0,
+          "unknownEntries": [],
+          "calorieCheck": "matches",
+          "cachedNutrientsStatus": "absent"
+        },
+        "warnings": []
+      },
+      "configPatch": {},
+      "sha256": "01ac17b58e2d6912df3bc7cf1c1092acad8635d307ee1a14907284b1e96898af"
+    },
+    {
+      "input": {
+        "date": "2026-09-23",
+        "mode": "fitia_optimal",
+        "sweetener": "stevia_only"
+      },
+      "day": {
+        "date": "2026-09-23",
+        "updateTime": "frozen-legacy-snapshot",
+        "goals": {
+          "caloriesKcal": 3000,
+          "proteinG": 110,
+          "carbsG": 400,
+          "fatG": 90
+        },
+        "consumed": {
+          "caloriesKcal": 3292,
+          "proteinG": 105,
+          "carbsG": 320,
+          "fatG": 81
+        },
+        "remaining": {
+          "caloriesKcal": -292,
+          "proteinG": 5,
+          "carbsG": 80,
+          "fatG": 9
+        },
+        "knownConsumed": {
+          "caloriesKcal": 0,
+          "proteinG": 0,
+          "carbsG": 0,
+          "fatG": 0
+        },
+        "meals": [],
+        "coverage": {
+          "complete": true,
+          "eatenEntries": 0,
+          "plannedEntries": 0,
+          "unknownStateEntries": 0,
+          "unknownEntries": [],
+          "calorieCheck": "matches",
+          "cachedNutrientsStatus": "absent"
+        },
+        "warnings": []
+      },
+      "configPatch": {},
+      "sha256": "26f3153158c7b1a261a22a348d1a83f37d9645aa993943e046ead4ace31cee06"
+    },
+    {
+      "input": {
+        "date": "2026-09-23",
+        "mode": "fitia_optimal",
+        "sweetener": "none"
+      },
+      "day": {
+        "date": "2026-09-23",
+        "updateTime": "frozen-legacy-snapshot",
+        "goals": {
+          "caloriesKcal": 3000,
+          "proteinG": 110,
+          "carbsG": 400,
+          "fatG": 90
+        },
+        "consumed": {
+          "caloriesKcal": 3292,
+          "proteinG": 105,
+          "carbsG": 320,
+          "fatG": 81
+        },
+        "remaining": {
+          "caloriesKcal": -292,
+          "proteinG": 5,
+          "carbsG": 80,
+          "fatG": 9
+        },
+        "knownConsumed": {
+          "caloriesKcal": 0,
+          "proteinG": 0,
+          "carbsG": 0,
+          "fatG": 0
+        },
+        "meals": [],
+        "coverage": {
+          "complete": true,
+          "eatenEntries": 0,
+          "plannedEntries": 0,
+          "unknownStateEntries": 0,
+          "unknownEntries": [],
+          "calorieCheck": "matches",
+          "cachedNutrientsStatus": "absent"
+        },
+        "warnings": []
+      },
+      "configPatch": {},
+      "sha256": "e6255b302e92e5e7473143f558b2d8676d4b51d1365b35c5f7d1deba7cbcab81"
+    },
+    {
+      "input": {
+        "date": "2026-09-23",
+        "mode": "fitia_adaptive",
+        "sweetener": "both"
+      },
+      "day": {
+        "date": "2026-09-23",
+        "updateTime": "frozen-legacy-snapshot",
+        "goals": {
+          "caloriesKcal": 3000,
+          "proteinG": 110,
+          "carbsG": 400,
+          "fatG": 90
+        },
+        "consumed": {
+          "caloriesKcal": 3292,
+          "proteinG": 105,
+          "carbsG": 320,
+          "fatG": 81
+        },
+        "remaining": {
+          "caloriesKcal": -292,
+          "proteinG": 5,
+          "carbsG": 80,
+          "fatG": 9
+        },
+        "knownConsumed": {
+          "caloriesKcal": 0,
+          "proteinG": 0,
+          "carbsG": 0,
+          "fatG": 0
+        },
+        "meals": [],
+        "coverage": {
+          "complete": true,
+          "eatenEntries": 0,
+          "plannedEntries": 0,
+          "unknownStateEntries": 0,
+          "unknownEntries": [],
+          "calorieCheck": "matches",
+          "cachedNutrientsStatus": "absent"
+        },
+        "warnings": []
+      },
+      "configPatch": {},
+      "sha256": "1df56fba16be68cac4fcce9753465f826593bebdca49484bd0fb6bd38867ddc1"
+    },
+    {
+      "input": {
+        "date": "2026-09-23",
+        "mode": "fitia_adaptive",
+        "sweetener": "honey_only"
+      },
+      "day": {
+        "date": "2026-09-23",
+        "updateTime": "frozen-legacy-snapshot",
+        "goals": {
+          "caloriesKcal": 3000,
+          "proteinG": 110,
+          "carbsG": 400,
+          "fatG": 90
+        },
+        "consumed": {
+          "caloriesKcal": 3292,
+          "proteinG": 105,
+          "carbsG": 320,
+          "fatG": 81
+        },
+        "remaining": {
+          "caloriesKcal": -292,
+          "proteinG": 5,
+          "carbsG": 80,
+          "fatG": 9
+        },
+        "knownConsumed": {
+          "caloriesKcal": 0,
+          "proteinG": 0,
+          "carbsG": 0,
+          "fatG": 0
+        },
+        "meals": [],
+        "coverage": {
+          "complete": true,
+          "eatenEntries": 0,
+          "plannedEntries": 0,
+          "unknownStateEntries": 0,
+          "unknownEntries": [],
+          "calorieCheck": "matches",
+          "cachedNutrientsStatus": "absent"
+        },
+        "warnings": []
+      },
+      "configPatch": {},
+      "sha256": "6013b40d2e4b48ce69b96a1c0708790da6f85e8c9c6cbfbcc45bcb3effeb2e74"
+    },
+    {
+      "input": {
+        "date": "2026-09-23",
+        "mode": "fitia_adaptive",
+        "sweetener": "stevia_only"
+      },
+      "day": {
+        "date": "2026-09-23",
+        "updateTime": "frozen-legacy-snapshot",
+        "goals": {
+          "caloriesKcal": 3000,
+          "proteinG": 110,
+          "carbsG": 400,
+          "fatG": 90
+        },
+        "consumed": {
+          "caloriesKcal": 3292,
+          "proteinG": 105,
+          "carbsG": 320,
+          "fatG": 81
+        },
+        "remaining": {
+          "caloriesKcal": -292,
+          "proteinG": 5,
+          "carbsG": 80,
+          "fatG": 9
+        },
+        "knownConsumed": {
+          "caloriesKcal": 0,
+          "proteinG": 0,
+          "carbsG": 0,
+          "fatG": 0
+        },
+        "meals": [],
+        "coverage": {
+          "complete": true,
+          "eatenEntries": 0,
+          "plannedEntries": 0,
+          "unknownStateEntries": 0,
+          "unknownEntries": [],
+          "calorieCheck": "matches",
+          "cachedNutrientsStatus": "absent"
+        },
+        "warnings": []
+      },
+      "configPatch": {},
+      "sha256": "9a8bddc24927ae83efb16ba54ec26e44fa0ffe3938698882c580ab5fb695ffc6"
+    },
+    {
+      "input": {
+        "date": "2026-09-23",
+        "mode": "fitia_adaptive",
+        "sweetener": "none"
+      },
+      "day": {
+        "date": "2026-09-23",
+        "updateTime": "frozen-legacy-snapshot",
+        "goals": {
+          "caloriesKcal": 3000,
+          "proteinG": 110,
+          "carbsG": 400,
+          "fatG": 90
+        },
+        "consumed": {
+          "caloriesKcal": 3292,
+          "proteinG": 105,
+          "carbsG": 320,
+          "fatG": 81
+        },
+        "remaining": {
+          "caloriesKcal": -292,
+          "proteinG": 5,
+          "carbsG": 80,
+          "fatG": 9
+        },
+        "knownConsumed": {
+          "caloriesKcal": 0,
+          "proteinG": 0,
+          "carbsG": 0,
+          "fatG": 0
+        },
+        "meals": [],
+        "coverage": {
+          "complete": true,
+          "eatenEntries": 0,
+          "plannedEntries": 0,
+          "unknownStateEntries": 0,
+          "unknownEntries": [],
+          "calorieCheck": "matches",
+          "cachedNutrientsStatus": "absent"
+        },
+        "warnings": []
+      },
+      "configPatch": {},
+      "sha256": "002e19a2fcafc431a7b43649aa7f7eb8c9dfe46ee19a51af01a7241760901726"
+    },
+    {
+      "input": {
+        "date": "2026-09-23",
+        "mode": "calories",
+        "sweetener": "both"
+      },
+      "day": {
+        "date": "2026-09-23",
+        "updateTime": "frozen-legacy-snapshot",
+        "goals": {
+          "caloriesKcal": 3000,
+          "proteinG": 110,
+          "carbsG": 400,
+          "fatG": 90
+        },
+        "consumed": {
+          "caloriesKcal": 2750,
+          "proteinG": 105,
+          "carbsG": 365,
+          "fatG": 85
+        },
+        "remaining": {
+          "caloriesKcal": 250,
+          "proteinG": 5,
+          "carbsG": 35,
+          "fatG": 5
+        },
+        "knownConsumed": {
+          "caloriesKcal": 0,
+          "proteinG": 0,
+          "carbsG": 0,
+          "fatG": 0
+        },
+        "meals": [],
+        "coverage": {
+          "complete": true,
+          "eatenEntries": 0,
+          "plannedEntries": 0,
+          "unknownStateEntries": 0,
+          "unknownEntries": [],
+          "calorieCheck": "matches",
+          "cachedNutrientsStatus": "absent"
+        },
+        "warnings": []
+      },
+      "configPatch": {},
+      "sha256": "05cc0335c7820c741e0302a964ba09cf6b61945951941f0d3f3b8e3ec175e485"
+    },
+    {
+      "input": {
+        "date": "2026-09-23",
+        "mode": "calories",
+        "sweetener": "honey_only"
+      },
+      "day": {
+        "date": "2026-09-23",
+        "updateTime": "frozen-legacy-snapshot",
+        "goals": {
+          "caloriesKcal": 3000,
+          "proteinG": 110,
+          "carbsG": 400,
+          "fatG": 90
+        },
+        "consumed": {
+          "caloriesKcal": 2750,
+          "proteinG": 105,
+          "carbsG": 365,
+          "fatG": 85
+        },
+        "remaining": {
+          "caloriesKcal": 250,
+          "proteinG": 5,
+          "carbsG": 35,
+          "fatG": 5
+        },
+        "knownConsumed": {
+          "caloriesKcal": 0,
+          "proteinG": 0,
+          "carbsG": 0,
+          "fatG": 0
+        },
+        "meals": [],
+        "coverage": {
+          "complete": true,
+          "eatenEntries": 0,
+          "plannedEntries": 0,
+          "unknownStateEntries": 0,
+          "unknownEntries": [],
+          "calorieCheck": "matches",
+          "cachedNutrientsStatus": "absent"
+        },
+        "warnings": []
+      },
+      "configPatch": {},
+      "sha256": "e64363befb98897e18620e8c2616dbe2ab4922c61c1b1d031bfc34d2b58109d4"
+    },
+    {
+      "input": {
+        "date": "2026-09-23",
+        "mode": "calories",
+        "sweetener": "stevia_only"
+      },
+      "day": {
+        "date": "2026-09-23",
+        "updateTime": "frozen-legacy-snapshot",
+        "goals": {
+          "caloriesKcal": 3000,
+          "proteinG": 110,
+          "carbsG": 400,
+          "fatG": 90
+        },
+        "consumed": {
+          "caloriesKcal": 2750,
+          "proteinG": 105,
+          "carbsG": 365,
+          "fatG": 85
+        },
+        "remaining": {
+          "caloriesKcal": 250,
+          "proteinG": 5,
+          "carbsG": 35,
+          "fatG": 5
+        },
+        "knownConsumed": {
+          "caloriesKcal": 0,
+          "proteinG": 0,
+          "carbsG": 0,
+          "fatG": 0
+        },
+        "meals": [],
+        "coverage": {
+          "complete": true,
+          "eatenEntries": 0,
+          "plannedEntries": 0,
+          "unknownStateEntries": 0,
+          "unknownEntries": [],
+          "calorieCheck": "matches",
+          "cachedNutrientsStatus": "absent"
+        },
+        "warnings": []
+      },
+      "configPatch": {},
+      "sha256": "f56561f1b216ffc8d0defd43ac378a6693b4d057215cb7454b055eebd5c65385"
+    },
+    {
+      "input": {
+        "date": "2026-09-23",
+        "mode": "calories",
+        "sweetener": "none"
+      },
+      "day": {
+        "date": "2026-09-23",
+        "updateTime": "frozen-legacy-snapshot",
+        "goals": {
+          "caloriesKcal": 3000,
+          "proteinG": 110,
+          "carbsG": 400,
+          "fatG": 90
+        },
+        "consumed": {
+          "caloriesKcal": 2750,
+          "proteinG": 105,
+          "carbsG": 365,
+          "fatG": 85
+        },
+        "remaining": {
+          "caloriesKcal": 250,
+          "proteinG": 5,
+          "carbsG": 35,
+          "fatG": 5
+        },
+        "knownConsumed": {
+          "caloriesKcal": 0,
+          "proteinG": 0,
+          "carbsG": 0,
+          "fatG": 0
+        },
+        "meals": [],
+        "coverage": {
+          "complete": true,
+          "eatenEntries": 0,
+          "plannedEntries": 0,
+          "unknownStateEntries": 0,
+          "unknownEntries": [],
+          "calorieCheck": "matches",
+          "cachedNutrientsStatus": "absent"
+        },
+        "warnings": []
+      },
+      "configPatch": {},
+      "sha256": "3562be681129ce90d48427a3fc1d403a7090fd39ec1d843350caeea4ac429c23"
+    },
+    {
+      "input": {
+        "date": "2026-09-23",
+        "mode": "fitia_optimal",
+        "sweetener": "both"
+      },
+      "day": {
+        "date": "2026-09-23",
+        "updateTime": "frozen-legacy-snapshot",
+        "goals": {
+          "caloriesKcal": 3000,
+          "proteinG": 110,
+          "carbsG": 400,
+          "fatG": 90
+        },
+        "consumed": {
+          "caloriesKcal": 2750,
+          "proteinG": 105,
+          "carbsG": 365,
+          "fatG": 85
+        },
+        "remaining": {
+          "caloriesKcal": 250,
+          "proteinG": 5,
+          "carbsG": 35,
+          "fatG": 5
+        },
+        "knownConsumed": {
+          "caloriesKcal": 0,
+          "proteinG": 0,
+          "carbsG": 0,
+          "fatG": 0
+        },
+        "meals": [],
+        "coverage": {
+          "complete": true,
+          "eatenEntries": 0,
+          "plannedEntries": 0,
+          "unknownStateEntries": 0,
+          "unknownEntries": [],
+          "calorieCheck": "matches",
+          "cachedNutrientsStatus": "absent"
+        },
+        "warnings": []
+      },
+      "configPatch": {},
+      "sha256": "01c7dbaec5b3ecc1f2ce1c8827de7e393ac59cacc25ef908c24d9ce3b4a3d25a"
+    },
+    {
+      "input": {
+        "date": "2026-09-23",
+        "mode": "fitia_optimal",
+        "sweetener": "honey_only"
+      },
+      "day": {
+        "date": "2026-09-23",
+        "updateTime": "frozen-legacy-snapshot",
+        "goals": {
+          "caloriesKcal": 3000,
+          "proteinG": 110,
+          "carbsG": 400,
+          "fatG": 90
+        },
+        "consumed": {
+          "caloriesKcal": 2750,
+          "proteinG": 105,
+          "carbsG": 365,
+          "fatG": 85
+        },
+        "remaining": {
+          "caloriesKcal": 250,
+          "proteinG": 5,
+          "carbsG": 35,
+          "fatG": 5
+        },
+        "knownConsumed": {
+          "caloriesKcal": 0,
+          "proteinG": 0,
+          "carbsG": 0,
+          "fatG": 0
+        },
+        "meals": [],
+        "coverage": {
+          "complete": true,
+          "eatenEntries": 0,
+          "plannedEntries": 0,
+          "unknownStateEntries": 0,
+          "unknownEntries": [],
+          "calorieCheck": "matches",
+          "cachedNutrientsStatus": "absent"
+        },
+        "warnings": []
+      },
+      "configPatch": {},
+      "sha256": "f30454ecae63df7ca1e3c6a68258ddc9a0444751e55423ee4cf64803cafea54e"
+    },
+    {
+      "input": {
+        "date": "2026-09-23",
+        "mode": "fitia_optimal",
+        "sweetener": "stevia_only"
+      },
+      "day": {
+        "date": "2026-09-23",
+        "updateTime": "frozen-legacy-snapshot",
+        "goals": {
+          "caloriesKcal": 3000,
+          "proteinG": 110,
+          "carbsG": 400,
+          "fatG": 90
+        },
+        "consumed": {
+          "caloriesKcal": 2750,
+          "proteinG": 105,
+          "carbsG": 365,
+          "fatG": 85
+        },
+        "remaining": {
+          "caloriesKcal": 250,
+          "proteinG": 5,
+          "carbsG": 35,
+          "fatG": 5
+        },
+        "knownConsumed": {
+          "caloriesKcal": 0,
+          "proteinG": 0,
+          "carbsG": 0,
+          "fatG": 0
+        },
+        "meals": [],
+        "coverage": {
+          "complete": true,
+          "eatenEntries": 0,
+          "plannedEntries": 0,
+          "unknownStateEntries": 0,
+          "unknownEntries": [],
+          "calorieCheck": "matches",
+          "cachedNutrientsStatus": "absent"
+        },
+        "warnings": []
+      },
+      "configPatch": {},
+      "sha256": "19f84afd619baf2f88db4eb36a03132c9a75de7ef3b99750da3d699173ea1e17"
+    },
+    {
+      "input": {
+        "date": "2026-09-23",
+        "mode": "fitia_optimal",
+        "sweetener": "none"
+      },
+      "day": {
+        "date": "2026-09-23",
+        "updateTime": "frozen-legacy-snapshot",
+        "goals": {
+          "caloriesKcal": 3000,
+          "proteinG": 110,
+          "carbsG": 400,
+          "fatG": 90
+        },
+        "consumed": {
+          "caloriesKcal": 2750,
+          "proteinG": 105,
+          "carbsG": 365,
+          "fatG": 85
+        },
+        "remaining": {
+          "caloriesKcal": 250,
+          "proteinG": 5,
+          "carbsG": 35,
+          "fatG": 5
+        },
+        "knownConsumed": {
+          "caloriesKcal": 0,
+          "proteinG": 0,
+          "carbsG": 0,
+          "fatG": 0
+        },
+        "meals": [],
+        "coverage": {
+          "complete": true,
+          "eatenEntries": 0,
+          "plannedEntries": 0,
+          "unknownStateEntries": 0,
+          "unknownEntries": [],
+          "calorieCheck": "matches",
+          "cachedNutrientsStatus": "absent"
+        },
+        "warnings": []
+      },
+      "configPatch": {},
+      "sha256": "430532000de110d995d54d5c9c33a1807961eb64bd0e58d26c7df2220c7de84c"
+    },
+    {
+      "input": {
+        "date": "2026-09-23",
+        "mode": "fitia_adaptive",
+        "sweetener": "both"
+      },
+      "day": {
+        "date": "2026-09-23",
+        "updateTime": "frozen-legacy-snapshot",
+        "goals": {
+          "caloriesKcal": 3000,
+          "proteinG": 110,
+          "carbsG": 400,
+          "fatG": 90
+        },
+        "consumed": {
+          "caloriesKcal": 2750,
+          "proteinG": 105,
+          "carbsG": 365,
+          "fatG": 85
+        },
+        "remaining": {
+          "caloriesKcal": 250,
+          "proteinG": 5,
+          "carbsG": 35,
+          "fatG": 5
+        },
+        "knownConsumed": {
+          "caloriesKcal": 0,
+          "proteinG": 0,
+          "carbsG": 0,
+          "fatG": 0
+        },
+        "meals": [],
+        "coverage": {
+          "complete": true,
+          "eatenEntries": 0,
+          "plannedEntries": 0,
+          "unknownStateEntries": 0,
+          "unknownEntries": [],
+          "calorieCheck": "matches",
+          "cachedNutrientsStatus": "absent"
+        },
+        "warnings": []
+      },
+      "configPatch": {},
+      "sha256": "0ab0ac3c51dcaa381deb38d0be4ccf4bdb4fba6b790ce4fc9b60d844770653b8"
+    },
+    {
+      "input": {
+        "date": "2026-09-23",
+        "mode": "fitia_adaptive",
+        "sweetener": "honey_only"
+      },
+      "day": {
+        "date": "2026-09-23",
+        "updateTime": "frozen-legacy-snapshot",
+        "goals": {
+          "caloriesKcal": 3000,
+          "proteinG": 110,
+          "carbsG": 400,
+          "fatG": 90
+        },
+        "consumed": {
+          "caloriesKcal": 2750,
+          "proteinG": 105,
+          "carbsG": 365,
+          "fatG": 85
+        },
+        "remaining": {
+          "caloriesKcal": 250,
+          "proteinG": 5,
+          "carbsG": 35,
+          "fatG": 5
+        },
+        "knownConsumed": {
+          "caloriesKcal": 0,
+          "proteinG": 0,
+          "carbsG": 0,
+          "fatG": 0
+        },
+        "meals": [],
+        "coverage": {
+          "complete": true,
+          "eatenEntries": 0,
+          "plannedEntries": 0,
+          "unknownStateEntries": 0,
+          "unknownEntries": [],
+          "calorieCheck": "matches",
+          "cachedNutrientsStatus": "absent"
+        },
+        "warnings": []
+      },
+      "configPatch": {},
+      "sha256": "e2c1473c884133dda7e36e67a7ae3af4eaa20893a8bf871e7c68ace4851061be"
+    },
+    {
+      "input": {
+        "date": "2026-09-23",
+        "mode": "fitia_adaptive",
+        "sweetener": "stevia_only"
+      },
+      "day": {
+        "date": "2026-09-23",
+        "updateTime": "frozen-legacy-snapshot",
+        "goals": {
+          "caloriesKcal": 3000,
+          "proteinG": 110,
+          "carbsG": 400,
+          "fatG": 90
+        },
+        "consumed": {
+          "caloriesKcal": 2750,
+          "proteinG": 105,
+          "carbsG": 365,
+          "fatG": 85
+        },
+        "remaining": {
+          "caloriesKcal": 250,
+          "proteinG": 5,
+          "carbsG": 35,
+          "fatG": 5
+        },
+        "knownConsumed": {
+          "caloriesKcal": 0,
+          "proteinG": 0,
+          "carbsG": 0,
+          "fatG": 0
+        },
+        "meals": [],
+        "coverage": {
+          "complete": true,
+          "eatenEntries": 0,
+          "plannedEntries": 0,
+          "unknownStateEntries": 0,
+          "unknownEntries": [],
+          "calorieCheck": "matches",
+          "cachedNutrientsStatus": "absent"
+        },
+        "warnings": []
+      },
+      "configPatch": {},
+      "sha256": "18b8ca2b13656622ebed0c8e04932abdca4cecf96ce58520856152156464db78"
+    },
+    {
+      "input": {
+        "date": "2026-09-23",
+        "mode": "fitia_adaptive",
+        "sweetener": "none"
+      },
+      "day": {
+        "date": "2026-09-23",
+        "updateTime": "frozen-legacy-snapshot",
+        "goals": {
+          "caloriesKcal": 3000,
+          "proteinG": 110,
+          "carbsG": 400,
+          "fatG": 90
+        },
+        "consumed": {
+          "caloriesKcal": 2750,
+          "proteinG": 105,
+          "carbsG": 365,
+          "fatG": 85
+        },
+        "remaining": {
+          "caloriesKcal": 250,
+          "proteinG": 5,
+          "carbsG": 35,
+          "fatG": 5
+        },
+        "knownConsumed": {
+          "caloriesKcal": 0,
+          "proteinG": 0,
+          "carbsG": 0,
+          "fatG": 0
+        },
+        "meals": [],
+        "coverage": {
+          "complete": true,
+          "eatenEntries": 0,
+          "plannedEntries": 0,
+          "unknownStateEntries": 0,
+          "unknownEntries": [],
+          "calorieCheck": "matches",
+          "cachedNutrientsStatus": "absent"
+        },
+        "warnings": []
+      },
+      "configPatch": {},
+      "sha256": "82894c65acd70c3c010b80f054e499c00d74530b1dfd70e0f6140e23536b9d2f"
+    },
+    {
+      "input": {
+        "date": "2026-09-23",
+        "mode": "calories",
+        "sweetener": "both"
+      },
+      "day": {
+        "date": "2026-09-23",
+        "updateTime": "frozen-legacy-snapshot",
+        "goals": {
+          "caloriesKcal": 3000,
+          "proteinG": 110,
+          "carbsG": 400,
+          "fatG": 90
+        },
+        "consumed": {
+          "caloriesKcal": 1300,
+          "proteinG": 40,
+          "carbsG": 130,
+          "fatG": 40
+        },
+        "remaining": {
+          "caloriesKcal": 1700,
+          "proteinG": 70,
+          "carbsG": 270,
+          "fatG": 50
+        },
+        "knownConsumed": {
+          "caloriesKcal": 0,
+          "proteinG": 0,
+          "carbsG": 0,
+          "fatG": 0
+        },
+        "meals": [],
+        "coverage": {
+          "complete": true,
+          "eatenEntries": 0,
+          "plannedEntries": 0,
+          "unknownStateEntries": 0,
+          "unknownEntries": [],
+          "calorieCheck": "matches",
+          "cachedNutrientsStatus": "absent"
+        },
+        "warnings": []
+      },
+      "configPatch": {},
+      "sha256": "663ae71177e6f36cf0a6528179e80f11cea1e05d846f1d624fdac8fa4ff668af"
+    },
+    {
+      "input": {
+        "date": "2026-09-23",
+        "mode": "calories",
+        "sweetener": "honey_only"
+      },
+      "day": {
+        "date": "2026-09-23",
+        "updateTime": "frozen-legacy-snapshot",
+        "goals": {
+          "caloriesKcal": 3000,
+          "proteinG": 110,
+          "carbsG": 400,
+          "fatG": 90
+        },
+        "consumed": {
+          "caloriesKcal": 1300,
+          "proteinG": 40,
+          "carbsG": 130,
+          "fatG": 40
+        },
+        "remaining": {
+          "caloriesKcal": 1700,
+          "proteinG": 70,
+          "carbsG": 270,
+          "fatG": 50
+        },
+        "knownConsumed": {
+          "caloriesKcal": 0,
+          "proteinG": 0,
+          "carbsG": 0,
+          "fatG": 0
+        },
+        "meals": [],
+        "coverage": {
+          "complete": true,
+          "eatenEntries": 0,
+          "plannedEntries": 0,
+          "unknownStateEntries": 0,
+          "unknownEntries": [],
+          "calorieCheck": "matches",
+          "cachedNutrientsStatus": "absent"
+        },
+        "warnings": []
+      },
+      "configPatch": {},
+      "sha256": "def62340a0fb2085b6d8ff8a312a3c42f3ed0993f0515d4649687cd389876f3d"
+    },
+    {
+      "input": {
+        "date": "2026-09-23",
+        "mode": "calories",
+        "sweetener": "stevia_only"
+      },
+      "day": {
+        "date": "2026-09-23",
+        "updateTime": "frozen-legacy-snapshot",
+        "goals": {
+          "caloriesKcal": 3000,
+          "proteinG": 110,
+          "carbsG": 400,
+          "fatG": 90
+        },
+        "consumed": {
+          "caloriesKcal": 1300,
+          "proteinG": 40,
+          "carbsG": 130,
+          "fatG": 40
+        },
+        "remaining": {
+          "caloriesKcal": 1700,
+          "proteinG": 70,
+          "carbsG": 270,
+          "fatG": 50
+        },
+        "knownConsumed": {
+          "caloriesKcal": 0,
+          "proteinG": 0,
+          "carbsG": 0,
+          "fatG": 0
+        },
+        "meals": [],
+        "coverage": {
+          "complete": true,
+          "eatenEntries": 0,
+          "plannedEntries": 0,
+          "unknownStateEntries": 0,
+          "unknownEntries": [],
+          "calorieCheck": "matches",
+          "cachedNutrientsStatus": "absent"
+        },
+        "warnings": []
+      },
+      "configPatch": {},
+      "sha256": "d3b2fca750616e2ebbfecc5f3dd67fb62ca7e52ed5d1a5b50df1c715d7613b35"
+    },
+    {
+      "input": {
+        "date": "2026-09-23",
+        "mode": "calories",
+        "sweetener": "none"
+      },
+      "day": {
+        "date": "2026-09-23",
+        "updateTime": "frozen-legacy-snapshot",
+        "goals": {
+          "caloriesKcal": 3000,
+          "proteinG": 110,
+          "carbsG": 400,
+          "fatG": 90
+        },
+        "consumed": {
+          "caloriesKcal": 1300,
+          "proteinG": 40,
+          "carbsG": 130,
+          "fatG": 40
+        },
+        "remaining": {
+          "caloriesKcal": 1700,
+          "proteinG": 70,
+          "carbsG": 270,
+          "fatG": 50
+        },
+        "knownConsumed": {
+          "caloriesKcal": 0,
+          "proteinG": 0,
+          "carbsG": 0,
+          "fatG": 0
+        },
+        "meals": [],
+        "coverage": {
+          "complete": true,
+          "eatenEntries": 0,
+          "plannedEntries": 0,
+          "unknownStateEntries": 0,
+          "unknownEntries": [],
+          "calorieCheck": "matches",
+          "cachedNutrientsStatus": "absent"
+        },
+        "warnings": []
+      },
+      "configPatch": {},
+      "sha256": "50fe8700cc331b67e05856f03c2c1577230604aae3c482ca2af91756b4741dbe"
+    },
+    {
+      "input": {
+        "date": "2026-09-23",
+        "mode": "fitia_optimal",
+        "sweetener": "both"
+      },
+      "day": {
+        "date": "2026-09-23",
+        "updateTime": "frozen-legacy-snapshot",
+        "goals": {
+          "caloriesKcal": 3000,
+          "proteinG": 110,
+          "carbsG": 400,
+          "fatG": 90
+        },
+        "consumed": {
+          "caloriesKcal": 1300,
+          "proteinG": 40,
+          "carbsG": 130,
+          "fatG": 40
+        },
+        "remaining": {
+          "caloriesKcal": 1700,
+          "proteinG": 70,
+          "carbsG": 270,
+          "fatG": 50
+        },
+        "knownConsumed": {
+          "caloriesKcal": 0,
+          "proteinG": 0,
+          "carbsG": 0,
+          "fatG": 0
+        },
+        "meals": [],
+        "coverage": {
+          "complete": true,
+          "eatenEntries": 0,
+          "plannedEntries": 0,
+          "unknownStateEntries": 0,
+          "unknownEntries": [],
+          "calorieCheck": "matches",
+          "cachedNutrientsStatus": "absent"
+        },
+        "warnings": []
+      },
+      "configPatch": {},
+      "sha256": "4a541ddae1eab8c4220d4b0cf556d695ffce6f5a049c852df500fb4b37bb9e22"
+    },
+    {
+      "input": {
+        "date": "2026-09-23",
+        "mode": "fitia_optimal",
+        "sweetener": "honey_only"
+      },
+      "day": {
+        "date": "2026-09-23",
+        "updateTime": "frozen-legacy-snapshot",
+        "goals": {
+          "caloriesKcal": 3000,
+          "proteinG": 110,
+          "carbsG": 400,
+          "fatG": 90
+        },
+        "consumed": {
+          "caloriesKcal": 1300,
+          "proteinG": 40,
+          "carbsG": 130,
+          "fatG": 40
+        },
+        "remaining": {
+          "caloriesKcal": 1700,
+          "proteinG": 70,
+          "carbsG": 270,
+          "fatG": 50
+        },
+        "knownConsumed": {
+          "caloriesKcal": 0,
+          "proteinG": 0,
+          "carbsG": 0,
+          "fatG": 0
+        },
+        "meals": [],
+        "coverage": {
+          "complete": true,
+          "eatenEntries": 0,
+          "plannedEntries": 0,
+          "unknownStateEntries": 0,
+          "unknownEntries": [],
+          "calorieCheck": "matches",
+          "cachedNutrientsStatus": "absent"
+        },
+        "warnings": []
+      },
+      "configPatch": {},
+      "sha256": "16c055cdc1f7e8b74d67a81be752ad594271ba09bbc8820a5cc9afc5cc5be4af"
+    },
+    {
+      "input": {
+        "date": "2026-09-23",
+        "mode": "fitia_optimal",
+        "sweetener": "stevia_only"
+      },
+      "day": {
+        "date": "2026-09-23",
+        "updateTime": "frozen-legacy-snapshot",
+        "goals": {
+          "caloriesKcal": 3000,
+          "proteinG": 110,
+          "carbsG": 400,
+          "fatG": 90
+        },
+        "consumed": {
+          "caloriesKcal": 1300,
+          "proteinG": 40,
+          "carbsG": 130,
+          "fatG": 40
+        },
+        "remaining": {
+          "caloriesKcal": 1700,
+          "proteinG": 70,
+          "carbsG": 270,
+          "fatG": 50
+        },
+        "knownConsumed": {
+          "caloriesKcal": 0,
+          "proteinG": 0,
+          "carbsG": 0,
+          "fatG": 0
+        },
+        "meals": [],
+        "coverage": {
+          "complete": true,
+          "eatenEntries": 0,
+          "plannedEntries": 0,
+          "unknownStateEntries": 0,
+          "unknownEntries": [],
+          "calorieCheck": "matches",
+          "cachedNutrientsStatus": "absent"
+        },
+        "warnings": []
+      },
+      "configPatch": {},
+      "sha256": "4a68af5c948685301749a92548ca7e67163ef899b7bd19e390fa11f3a171a16d"
+    },
+    {
+      "input": {
+        "date": "2026-09-23",
+        "mode": "fitia_optimal",
+        "sweetener": "none"
+      },
+      "day": {
+        "date": "2026-09-23",
+        "updateTime": "frozen-legacy-snapshot",
+        "goals": {
+          "caloriesKcal": 3000,
+          "proteinG": 110,
+          "carbsG": 400,
+          "fatG": 90
+        },
+        "consumed": {
+          "caloriesKcal": 1300,
+          "proteinG": 40,
+          "carbsG": 130,
+          "fatG": 40
+        },
+        "remaining": {
+          "caloriesKcal": 1700,
+          "proteinG": 70,
+          "carbsG": 270,
+          "fatG": 50
+        },
+        "knownConsumed": {
+          "caloriesKcal": 0,
+          "proteinG": 0,
+          "carbsG": 0,
+          "fatG": 0
+        },
+        "meals": [],
+        "coverage": {
+          "complete": true,
+          "eatenEntries": 0,
+          "plannedEntries": 0,
+          "unknownStateEntries": 0,
+          "unknownEntries": [],
+          "calorieCheck": "matches",
+          "cachedNutrientsStatus": "absent"
+        },
+        "warnings": []
+      },
+      "configPatch": {},
+      "sha256": "b5f3f9d6b5c6ca50de1f6d737c4335c18c34267d895bcde71cb0860be47de8ed"
+    },
+    {
+      "input": {
+        "date": "2026-09-23",
+        "mode": "fitia_adaptive",
+        "sweetener": "both"
+      },
+      "day": {
+        "date": "2026-09-23",
+        "updateTime": "frozen-legacy-snapshot",
+        "goals": {
+          "caloriesKcal": 3000,
+          "proteinG": 110,
+          "carbsG": 400,
+          "fatG": 90
+        },
+        "consumed": {
+          "caloriesKcal": 1300,
+          "proteinG": 40,
+          "carbsG": 130,
+          "fatG": 40
+        },
+        "remaining": {
+          "caloriesKcal": 1700,
+          "proteinG": 70,
+          "carbsG": 270,
+          "fatG": 50
+        },
+        "knownConsumed": {
+          "caloriesKcal": 0,
+          "proteinG": 0,
+          "carbsG": 0,
+          "fatG": 0
+        },
+        "meals": [],
+        "coverage": {
+          "complete": true,
+          "eatenEntries": 0,
+          "plannedEntries": 0,
+          "unknownStateEntries": 0,
+          "unknownEntries": [],
+          "calorieCheck": "matches",
+          "cachedNutrientsStatus": "absent"
+        },
+        "warnings": []
+      },
+      "configPatch": {},
+      "sha256": "0760912c8bb8933ee2dc7aa6638bf6d72e81b102f59cf34b7b8eb58b9c710f3c"
+    },
+    {
+      "input": {
+        "date": "2026-09-23",
+        "mode": "fitia_adaptive",
+        "sweetener": "honey_only"
+      },
+      "day": {
+        "date": "2026-09-23",
+        "updateTime": "frozen-legacy-snapshot",
+        "goals": {
+          "caloriesKcal": 3000,
+          "proteinG": 110,
+          "carbsG": 400,
+          "fatG": 90
+        },
+        "consumed": {
+          "caloriesKcal": 1300,
+          "proteinG": 40,
+          "carbsG": 130,
+          "fatG": 40
+        },
+        "remaining": {
+          "caloriesKcal": 1700,
+          "proteinG": 70,
+          "carbsG": 270,
+          "fatG": 50
+        },
+        "knownConsumed": {
+          "caloriesKcal": 0,
+          "proteinG": 0,
+          "carbsG": 0,
+          "fatG": 0
+        },
+        "meals": [],
+        "coverage": {
+          "complete": true,
+          "eatenEntries": 0,
+          "plannedEntries": 0,
+          "unknownStateEntries": 0,
+          "unknownEntries": [],
+          "calorieCheck": "matches",
+          "cachedNutrientsStatus": "absent"
+        },
+        "warnings": []
+      },
+      "configPatch": {},
+      "sha256": "cbea708878403debf31df8c46cd58cb2023cd19650946685165b1503015130c7"
+    },
+    {
+      "input": {
+        "date": "2026-09-23",
+        "mode": "fitia_adaptive",
+        "sweetener": "stevia_only"
+      },
+      "day": {
+        "date": "2026-09-23",
+        "updateTime": "frozen-legacy-snapshot",
+        "goals": {
+          "caloriesKcal": 3000,
+          "proteinG": 110,
+          "carbsG": 400,
+          "fatG": 90
+        },
+        "consumed": {
+          "caloriesKcal": 1300,
+          "proteinG": 40,
+          "carbsG": 130,
+          "fatG": 40
+        },
+        "remaining": {
+          "caloriesKcal": 1700,
+          "proteinG": 70,
+          "carbsG": 270,
+          "fatG": 50
+        },
+        "knownConsumed": {
+          "caloriesKcal": 0,
+          "proteinG": 0,
+          "carbsG": 0,
+          "fatG": 0
+        },
+        "meals": [],
+        "coverage": {
+          "complete": true,
+          "eatenEntries": 0,
+          "plannedEntries": 0,
+          "unknownStateEntries": 0,
+          "unknownEntries": [],
+          "calorieCheck": "matches",
+          "cachedNutrientsStatus": "absent"
+        },
+        "warnings": []
+      },
+      "configPatch": {},
+      "sha256": "104f89d8ac20c98fc0d9bab5a3785d229cd0dea6ad8b8302dab4343734cd030a"
+    },
+    {
+      "input": {
+        "date": "2026-09-23",
+        "mode": "fitia_adaptive",
+        "sweetener": "none"
+      },
+      "day": {
+        "date": "2026-09-23",
+        "updateTime": "frozen-legacy-snapshot",
+        "goals": {
+          "caloriesKcal": 3000,
+          "proteinG": 110,
+          "carbsG": 400,
+          "fatG": 90
+        },
+        "consumed": {
+          "caloriesKcal": 1300,
+          "proteinG": 40,
+          "carbsG": 130,
+          "fatG": 40
+        },
+        "remaining": {
+          "caloriesKcal": 1700,
+          "proteinG": 70,
+          "carbsG": 270,
+          "fatG": 50
+        },
+        "knownConsumed": {
+          "caloriesKcal": 0,
+          "proteinG": 0,
+          "carbsG": 0,
+          "fatG": 0
+        },
+        "meals": [],
+        "coverage": {
+          "complete": true,
+          "eatenEntries": 0,
+          "plannedEntries": 0,
+          "unknownStateEntries": 0,
+          "unknownEntries": [],
+          "calorieCheck": "matches",
+          "cachedNutrientsStatus": "absent"
+        },
+        "warnings": []
+      },
+      "configPatch": {},
+      "sha256": "95b38e073fd0d350619b975bb42e578ecba8682d5e755097a2377230a65791ac"
+    },
+    {
+      "input": {
+        "date": "2026-09-22",
+        "mode": "fitia_optimal",
+        "sweetener": "honey_only"
+      },
+      "day": {
+        "date": "2026-09-22",
+        "updateTime": "frozen-legacy-snapshot",
+        "goals": {
+          "caloriesKcal": 2842.046235245469,
+          "proteinG": 111.96,
+          "carbsG": 385.39809116795703,
+          "fatG": 94.73487450818229
+        },
+        "consumed": {
+          "caloriesKcal": 2076.806667,
+          "proteinG": 139.5777,
+          "carbsG": 152.1379,
+          "fatG": 97.8467
+        },
+        "remaining": {
+          "caloriesKcal": 765.239568,
+          "proteinG": -27.6177,
+          "carbsG": 233.260191,
+          "fatG": -3.111825
+        },
+        "knownConsumed": {
+          "caloriesKcal": 0,
+          "proteinG": 0,
+          "carbsG": 0,
+          "fatG": 0
+        },
+        "meals": [],
+        "coverage": {
+          "complete": true,
+          "eatenEntries": 0,
+          "plannedEntries": 0,
+          "unknownStateEntries": 0,
+          "unknownEntries": [],
+          "calorieCheck": "matches",
+          "cachedNutrientsStatus": "absent"
+        },
+        "warnings": []
+      },
+      "configPatch": {},
+      "sha256": "9e2587641d3112442cab35f6ee33961d42ea2771a544f5962f2fadff5894eea3"
+    },
+    {
+      "input": {
+        "date": "2026-09-23",
+        "mode": "fitia_adaptive",
+        "sweetener": "both"
+      },
+      "day": {
+        "date": "2026-09-23",
+        "updateTime": "frozen-legacy-snapshot",
+        "goals": {
+          "caloriesKcal": 3000,
+          "proteinG": 110,
+          "carbsG": 400,
+          "fatG": 90
+        },
+        "consumed": {
+          "caloriesKcal": 1800,
+          "proteinG": 70,
+          "carbsG": 200,
+          "fatG": 50
+        },
+        "remaining": {
+          "caloriesKcal": 1200,
+          "proteinG": 40,
+          "carbsG": 200,
+          "fatG": 40
+        },
+        "knownConsumed": {
+          "caloriesKcal": 0,
+          "proteinG": 0,
+          "carbsG": 0,
+          "fatG": 0
+        },
+        "meals": [],
+        "coverage": {
+          "complete": true,
+          "eatenEntries": 0,
+          "plannedEntries": 0,
+          "unknownStateEntries": 0,
+          "unknownEntries": [],
+          "calorieCheck": "matches",
+          "cachedNutrientsStatus": "absent"
+        },
+        "warnings": []
+      },
+      "configPatch": {
+        "sweetenerInventory": "unknown",
+        "defaultMode": "fitia_optimal",
+        "honeyGramsPerTablespoon": 20.3,
+        "preferredNightCaloriesKcal": 700,
+        "maxNightCaloriesKcal": 750,
+        "adaptive": {
+          "bounds": {
+            "quaker_oats": {
+              "minFactor": 0.2,
+              "maxFactor": 2
+            },
+            "anchor": {
+              "minFactor": 0,
+              "maxFactor": 1.5
+            },
+            "nestum": {
+              "minFactor": 0.25,
+              "maxFactor": 6
+            },
+            "seven_cereals": {
+              "minFactor": 0.3,
+              "maxFactor": 2
+            },
+            "maca": {
+              "minFactor": 0.4,
+              "maxFactor": 1.6
+            },
+            "cocoa": {
+              "minFactor": 0.4,
+              "maxFactor": 1.6
+            },
+            "cinnamon": {
+              "minFactor": 0,
+              "maxFactor": 2
+            },
+            "vanilla": {
+              "minFactor": 0.3333333333333333,
+              "maxFactor": 1.6666666666666667
+            }
+          },
+          "deviationWeight": 0.01,
+          "metricWeights": {
+            "caloriesKcal": 4,
+            "proteinG": 1,
+            "carbsG": 2,
+            "fatG": 1
+          },
+          "alreadyHighMultipliers": {
+            "caloriesKcal": 1,
+            "proteinG": 5,
+            "carbsG": 1,
+            "fatG": 8
+          },
+          "waterMlPerDryGram": 4.109589041095891,
+          "maxDrySolidsG": 400,
+          "maxBatchCaloriesKcal": 2000
+        },
+        "honeyProfile": {
+          "source": "standard_reference",
+          "label": "Generic honey reference; replace with the actual product label",
+          "per100G": {
+            "caloriesKcal": 304,
+            "carbsG": 82.4,
+            "proteinG": 0,
+            "fatG": 0
+          }
+        }
+      },
+      "sha256": "1c59d70b4e57f602cd747c53ba9125316d58d4b16c6605a1a4f158d0c21d76de"
+    }
+  ]
+}

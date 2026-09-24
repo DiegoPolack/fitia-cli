@@ -344,7 +344,8 @@ export function createServer(options: ServerOptions = {}) {
   server.registerTool(
     "fitia-gainer-config-get",
     {
-      description: "Read this authenticated user's persistent gainer preferences and version.",
+      description:
+        "Read this authenticated user's resolved gainer preferences, activeProfile, recipeProfiles and version. Old settings resolve to immutable legacy_v1; Maltodex is disabled by default.",
       inputSchema: z.strictObject({}),
       annotations: { readOnlyHint: true },
       _meta: readSecurity,
@@ -355,7 +356,7 @@ export function createServer(options: ServerOptions = {}) {
     "fitia-gainer-config-update",
     {
       description:
-        "Preview the exact gainer preferences patch with confirm=false. After explicit approval submit the same patch, confirm=true and expectedVersion from the preview. Uses existing scope, kill switch, encrypted audit and readback.",
+        "Preview the exact gainer preferences patch with confirm=false. legacy_v1 is immutable; prepare independent ingredients, bounds, nutrition, prices and Anchor water_ratio in inactive recipeProfiles.future_v2. Selecting activeProfile=future_v2 requires complete valid configuration. Unknown protein cannot be inferred as zero. After explicit approval submit the same patch, confirm=true and expectedVersion from the preview. Uses existing scope, kill switch, encrypted audit and readback.",
       inputSchema: z.strictObject({
         patch: gainerConfigPatch,
         confirm: z.boolean().default(false),
@@ -450,7 +451,7 @@ export function createServer(options: ServerOptions = {}) {
     "fitia-gainer-calculate",
     {
       description:
-        "Calculate Polack Labs Mass Gainer v1 from the same live summary as fitia-day-summary. fitia_optimal keeps fixed proportions (default). Optional fitia_adaptive searches bounded individual whole ingredient amounts using saved adaptive settings, with extra penalties for adding already-high protein/fat; its scaleFactor is only a calorie equivalent, never a preparation instruction. Both use planningConsumed: excludes verified registered carryovers from earlier source dates, reserves unregistered pending portions once, and optimizes all four 90-110% green ranges. Returns registeredConsumed, excludedCarryoverFromPlanning, planningBasis, effectiveProjection (full practical batch attributed to today) and fitiaProjection (only today's practical serving added to real Fitia totals). Do not subtract carryovers manually. Splits large batches using saved night limits; returns separate night/morning log payloads, carryoverDraft, practical amounts, macros and cost. Use calories for explicit kcal. Default sweetener=auto and saved mode. Never reconstruct the recipe. Read-only; save carryover only through an approved mutation and never log the whole split batch on one day.",
+        "Calculate Polack Labs Mass Gainer using the saved activeProfile (default frozen legacy_v1) from the same live summary as fitia-day-summary. Disabled ingredients never participate; profile changes require config preview and approval. fitia_optimal keeps fixed proportions (default). Optional fitia_adaptive defaults to proportional_v2: vary only four main ingredients around the daily proportional baseline, derive flavors/water from their mass, and evaluate neighboring size-based honey tablespoons for honey_only. The legacy_v1 adaptive strategy remains selectable. Both retain extra penalties for already-high protein/fat. Adaptive scaleFactor is only a calorie equivalent, never a preparation instruction. Preserve versioned adaptivePreparation in carryover drafts. Both use planningConsumed: excludes verified registered carryovers from earlier source dates, reserves unregistered pending portions once, and optimizes all four 90-110% green ranges. Returns registeredConsumed, excludedCarryoverFromPlanning, planningBasis, effectiveProjection (full practical batch attributed to today) and fitiaProjection (only today's practical serving added to real Fitia totals). Do not subtract carryovers manually. Splits large batches using saved night limits; returns separate night/morning log payloads, carryoverDraft, practical amounts, macros and cost. Use calories for explicit kcal. Default sweetener=auto and saved mode. Never reconstruct the recipe. Read-only; save carryover only through an approved mutation and never log the whole split batch on one day.",
       inputSchema: z.strictObject({
         date,
         mode: z.enum(gainerModes).optional(),

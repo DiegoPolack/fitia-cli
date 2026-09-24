@@ -3,25 +3,31 @@ import { validateDate } from "../diary.ts";
 import { CliError } from "../errors.ts";
 import { type DaySummary, type Macros, macroKeys, round } from "../nutrition.ts";
 import { validAdaptiveAmounts } from "./adaptive.ts";
+import { type ProportionalPreparation, validateProportionalPreparation } from "./adaptive-proportional.ts";
 import { greenRanges } from "./optimization.ts";
-import { amountsNutrition, drySolidsG, portionNutrition, roundedMacros, scaleMacros } from "./portion.ts";
 import {
-  baseMixNutrition,
-  type GainerAmounts,
-  type GainerConfig,
-  gainerRecipe,
-  type SweetenerInventory,
-} from "./recipe.ts";
+  amountsNutrition,
+  fitsProfile,
+  portionNutrition,
+  quantity,
+  roundedMacros,
+  scaledAmounts,
+  scaleMacros,
+  waterForAmounts,
+} from "./portion.ts";
+import { type RuntimeRecipe, resolveRecipe } from "./profiles.ts";
+import { type GainerConfig, gainerRecipe, type RecipeAmounts, type SweetenerInventory } from "./recipe.ts";
 
 export const servingPolicy = { percentStep: 1, minimumCarryoverCaloriesKcal: 100 } as const;
 export type ConcreteSweetener = Exclude<SweetenerInventory, "unknown">;
 export type CarryoverDraft = {
   sourceDate: string;
-  recipeId: typeof gainerRecipe.id;
+  recipeId: RuntimeRecipe["id"];
   scaleFactor: number;
   sweetener: ConcreteSweetener;
   nightPercent: number;
-  adaptiveAmounts?: GainerAmounts;
+  adaptiveAmounts?: RecipeAmounts;
+  adaptivePreparation?: ProportionalPreparation;
 };
 
 export function nextDate(date: string) {
@@ -89,21 +95,42 @@ export function nightPercentage(batch: Macros, config: GainerConfig, day: DaySum
 }
 
 export function makeCarryoverPlan(draft: CarryoverDraft, config: GainerConfig) {
+  const recipe = resolveRecipe(config),
+    baseMixNutrition = recipe.baseNutrition;
+  if (draft.recipeId !== recipe.id)
+    throw new CliError(
+      "RECIPE_PROFILE_MISMATCH",
+      "Carryover recipe must match its frozen profile.",
+      "Use the calculator draft and its matching config version.",
+    );
   const targetDate = nextDate(draft.sourceDate);
-  const sweetener = gainerRecipe.sweeteners[draft.sweetener];
+  const configuredSweetener = gainerRecipe.sweeteners[draft.sweetener];
+  const sweetener = draft.adaptivePreparation
+    ? { ...configuredSweetener, honeyTablespoons: draft.adaptivePreparation.honeyTablespoons }
+    : configuredSweetener;
   const honeyG = Math.round(sweetener.honeyTablespoons * config.honeyGramsPerTablespoon);
   const honey = scaleMacros(config.honeyProfile.per100G, honeyG / 100);
   const amounts = draft.adaptiveAmounts;
+  if (draft.adaptivePreparation && !amounts)
+    throw new CliError(
+      "INVALID_ADAPTIVE_BATCH",
+      "Versioned adaptive preparation requires concrete amounts.",
+      "Use the complete calculator draft.",
+    );
+  const proportionalBatch =
+    draft.adaptivePreparation && amounts
+      ? validateProportionalPreparation(amounts, draft.adaptivePreparation, draft.sweetener, config, recipe)
+      : null;
   const nutrition = amounts
-    ? amountsNutrition(amounts, honey)
-    : portionNutrition(draft.scaleFactor, honey, honey).practical;
+    ? amountsNutrition(amounts, honey, recipe)
+    : portionNutrition(draft.scaleFactor, honey, honey, recipe).practical;
   if (
     amounts &&
-    (!validAdaptiveAmounts(amounts, config.adaptive) ||
-      nutrition.caloriesKcal > config.adaptive.maxBatchCaloriesKcal ||
+    ((!proportionalBatch && !validAdaptiveAmounts(amounts, recipe.adaptive, recipe)) ||
+      nutrition.caloriesKcal > recipe.adaptive.maxBatchCaloriesKcal ||
       Math.abs(
         draft.scaleFactor -
-          amountsNutrition(amounts, { caloriesKcal: 0, proteinG: 0, carbsG: 0, fatG: 0 }).caloriesKcal /
+          amountsNutrition(amounts, { caloriesKcal: 0, proteinG: 0, carbsG: 0, fatG: 0 }, recipe).caloriesKcal /
             baseMixNutrition.caloriesKcal,
       ) > 1e-6)
   )
@@ -123,30 +150,37 @@ export function makeCarryoverPlan(draft: CarryoverDraft, config: GainerConfig) {
       "The split does not satisfy the configured night limits.",
       "Use the carryoverDraft returned by a split calculation.",
     );
+  const practicalAmounts = amounts ?? scaledAmounts(draft.scaleFactor, recipe);
+  if (!fitsProfile(practicalAmounts, nutrition, recipe))
+    throw new CliError(
+      "INVALID_RECIPE_BATCH",
+      "Carryover exceeds the frozen profile bounds or batch limits.",
+      "Use the exact draft returned by the calculator.",
+    );
   const fullBatch = {
     practicalNutrition: nutrition,
-    ingredients: gainerRecipe.ingredients.map((i) => ({
+    ingredients: recipe.ingredients.map((i) => ({
       id: i.id,
       name: i.name,
       ...(i.unit === "g"
-        ? { practicalG: amounts?.[i.id] ?? Math.round(i.amount * draft.scaleFactor) }
-        : { practicalMl: amounts?.[i.id] ?? Math.round(i.amount * draft.scaleFactor) }),
+        ? { practicalG: quantity(practicalAmounts, i.id) }
+        : { practicalMl: quantity(practicalAmounts, i.id) }),
     })),
     water: {
       practicalMl:
         Math.round(
-          (amounts
-            ? drySolidsG(amounts) * config.adaptive.waterMlPerDryGram
-            : gainerRecipe.waterMl * draft.scaleFactor) / 10,
+          (amounts || recipe.waterMode !== "legacy"
+            ? (proportionalBatch?.waterMl ?? waterForAmounts(practicalAmounts, recipe))
+            : recipe.waterMl * draft.scaleFactor) / 10,
         ) * 10,
     },
-    creatineG: gainerRecipe.creatineG,
+    creatineG: recipe.creatineG,
     sweetener: { mode: draft.sweetener, ...sweetener, practicalHoneyG: honeyG },
   };
   const id = createHash("sha256")
     .update(JSON.stringify([draft.sourceDate, targetDate, draft.recipeId, fullBatch, draft.nightPercent]))
     .digest("hex");
-  const name = `${gainerRecipe.name}${amounts ? " adaptive" : ""}`;
+  const name = `${recipe.name}${amounts ? " adaptive" : ""}`;
   return {
     id,
     sourceDate: draft.sourceDate,
@@ -160,14 +194,14 @@ export function makeCarryoverPlan(draft: CarryoverDraft, config: GainerConfig) {
       fraction: draft.nightPercent / 100,
       percent: draft.nightPercent,
       nutrition: portions.night,
-      creatineG: round((gainerRecipe.creatineG * draft.nightPercent) / 100),
+      creatineG: round((recipe.creatineG * draft.nightPercent) / 100),
     },
     morningCarryover: {
       fraction: (100 - draft.nightPercent) / 100,
       percent: 100 - draft.nightPercent,
       targetDate,
       nutrition: portions.morning,
-      creatineG: round((gainerRecipe.creatineG * (100 - draft.nightPercent)) / 100),
+      creatineG: round((recipe.creatineG * (100 - draft.nightPercent)) / 100),
     },
     nightMealLog: {
       date: draft.sourceDate,

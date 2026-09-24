@@ -1,36 +1,64 @@
 import { emptyMacros, type Macros, macroKeys, round } from "../nutrition.ts";
 import { type GreenRanges, optimizationPolicy, optimizeGainer, scoreGainer, states } from "./optimization.ts";
-import { amountsNutrition, drySolidsG, portionNutrition } from "./portion.ts";
-import { type AdaptiveConfig, baseMixNutrition, type GainerAmounts, gainerRecipe } from "./recipe.ts";
+import { amountsNutrition, anchorRange, drySolidsG, portionNutrition, quantity, scaledAmounts } from "./portion.ts";
+import { legacyRuntimeRecipe } from "./profiles.ts";
+import type { AdaptiveConfig, RecipeAmounts } from "./recipe.ts";
 
 // Fixed work budget and traversal order: identical inputs always produce identical output.
 export const adaptiveSearchPolicy = { steps: [8, 4, 2, 1], passesPerStep: 16, maxCandidates: 18000 } as const;
-const ingredients = gainerRecipe.ingredients;
 
-export function adaptiveBounds(config: AdaptiveConfig) {
-  return ingredients.map((i) => ({
-    id: i.id,
-    min: Math.ceil(i.amount * config.bounds[i.id].minFactor - 1e-9),
-    max: Math.floor(i.amount * config.bounds[i.id].maxFactor + 1e-9),
-  }));
+export function adaptiveBounds(config: AdaptiveConfig, recipe = legacyRuntimeRecipe(config)) {
+  return recipe.ingredients.map((i) => {
+    const bounds = config.bounds[i.id];
+    if (!bounds) throw new Error(`Missing adaptive bounds for active ingredient: ${i.id}`);
+    return {
+      id: i.id,
+      min: Math.ceil(i.amount * bounds.minFactor - 1e-9),
+      max: Math.floor(i.amount * bounds.maxFactor + 1e-9),
+    };
+  });
 }
 
-export function validAdaptiveAmounts(amounts: GainerAmounts, config: AdaptiveConfig) {
+export function minimumAdaptiveAmounts(config: AdaptiveConfig, recipe = legacyRuntimeRecipe(config)): RecipeAmounts {
+  const amounts = Object.fromEntries(adaptiveBounds(config, recipe).map((b) => [b.id, Math.max(0, b.min)]));
+  const dairy = anchorRange(amounts, recipe);
+  if (dairy) amounts.anchor = dairy.min;
+  return amounts;
+}
+
+export function validAdaptiveAmounts(
+  amounts: RecipeAmounts,
+  config: AdaptiveConfig,
+  recipe = legacyRuntimeRecipe(config),
+) {
+  const ingredients = recipe.ingredients;
+  if (Object.keys(amounts).some((id) => !ingredients.some((i) => i.id === id))) return false;
+  if (ingredients.some((i) => amounts[i.id] === undefined || !Number.isFinite(amounts[i.id]))) return false;
+  const dairy = anchorRange(amounts, recipe);
+  if (dairy && (quantity(amounts, "anchor") < dairy.min || quantity(amounts, "anchor") > dairy.max)) return false;
   return (
-    adaptiveBounds(config).every(
-      (b) => Number.isInteger(amounts[b.id]) && amounts[b.id] >= b.min && amounts[b.id] <= b.max,
+    adaptiveBounds(config, recipe).every(
+      (b) =>
+        Number.isInteger(amounts[b.id]) &&
+        (b.id === "anchor" && dairy ? true : quantity(amounts, b.id) >= b.min && quantity(amounts, b.id) <= b.max),
     ) &&
-    ingredients.some((i) => i.nutrition && amounts[i.id] > 0) &&
-    drySolidsG(amounts) <= config.maxDrySolidsG
+    ingredients.some((i) => i.nutrition && quantity(amounts, i.id) > 0) &&
+    drySolidsG(amounts, recipe) <= config.maxDrySolidsG
   );
 }
 
-export function adaptiveDeviation(amounts: GainerAmounts, config: AdaptiveConfig) {
-  const scale = amountsNutrition(amounts, emptyMacros()).caloriesKcal / baseMixNutrition.caloriesKcal;
+export function adaptiveDeviation(
+  amounts: RecipeAmounts,
+  config: AdaptiveConfig,
+  recipe = legacyRuntimeRecipe(config),
+) {
+  const ingredients = recipe.ingredients,
+    baseMixNutrition = recipe.baseNutrition;
+  const scale = amountsNutrition(amounts, emptyMacros(), recipe).caloriesKcal / baseMixNutrition.caloriesKcal;
   return (
     (config.deviationWeight *
       ingredients.reduce(
-        (sum, i) => sum + Math.abs(amounts[i.id] - i.amount * scale) / Math.max(i.amount * scale, 1),
+        (sum, i) => sum + Math.abs(quantity(amounts, i.id) - i.amount * scale) / Math.max(i.amount * scale, 1),
         0,
       )) /
     ingredients.length
@@ -43,46 +71,51 @@ export function optimizeAdaptive(
   sweetener: Macros,
   practicalSweetener: Macros,
   config: AdaptiveConfig,
+  recipe = legacyRuntimeRecipe(config),
 ) {
+  const ingredients = recipe.ingredients,
+    baseMixNutrition = recipe.baseNutrition;
   const before = states(consumed, ranges);
   const maxAdditionalCalories = Math.max(0, ranges.caloriesKcal.max - consumed.caloriesKcal);
   const budget = Math.min(maxAdditionalCalories, config.maxBatchCaloriesKcal);
   const score = (nutrition: Macros) =>
     scoreGainer(consumed, ranges, nutrition, config.metricWeights, config.alreadyHighMultipliers);
   const baseline = score(emptyMacros());
-  const fixed = optimizeGainer(consumed, ranges, sweetener, practicalSweetener);
-  const fixedAmounts = Object.fromEntries(
-    ingredients.map((i) => [i.id, Math.round(i.amount * fixed.scaleFactor)]),
-  ) as GainerAmounts;
+  const fixed = optimizeGainer(consumed, ranges, sweetener, practicalSweetener, recipe);
+  const fixedAmounts = scaledAmounts(fixed.scaleFactor, recipe);
   const fixedNutrition =
     fixed.scaleFactor > 0
-      ? portionNutrition(fixed.scaleFactor, sweetener, practicalSweetener).practical
+      ? portionNutrition(fixed.scaleFactor, sweetener, practicalSweetener, recipe).practical
       : emptyMacros();
-  const bounds = adaptiveBounds(config);
+  const bounds = adaptiveBounds(config, recipe);
   const clamp = (scale: number) =>
     Object.fromEntries(
       bounds.map((b, n) => [b.id, Math.min(b.max, Math.max(b.min, Math.round(ingredients[n]!.amount * scale)))]),
-    ) as GainerAmounts;
+    ) as RecipeAmounts;
   const evaluated = new Map<string, Candidate | null>();
   type Candidate = {
-    amounts: GainerAmounts;
+    amounts: RecipeAmounts;
     nutrition: Macros;
     score: ReturnType<typeof score>;
     deviation: number;
     total: number;
   };
   let feasibleCandidates = 0;
-  const evaluate = (amounts: GainerAmounts): Candidate | null => {
-    const key = ingredients.map((i) => amounts[i.id]).join(",");
+  const evaluate = (proposed: RecipeAmounts): Candidate | null => {
+    const dairy = anchorRange(proposed, recipe);
+    const amounts = dairy
+      ? { ...proposed, anchor: Math.min(dairy.max, Math.max(dairy.min, quantity(proposed, "anchor"))) }
+      : proposed;
+    const key = ingredients.map((i) => quantity(amounts, i.id)).join(",");
     if (evaluated.has(key)) return evaluated.get(key)!;
     if (evaluated.size >= adaptiveSearchPolicy.maxCandidates) return null;
     let candidate: Candidate | null = null;
-    if (validAdaptiveAmounts(amounts, config)) {
-      const nutrition = amountsNutrition(amounts, practicalSweetener);
-      const exact = amountsNutrition(amounts, sweetener);
+    if (validAdaptiveAmounts(amounts, config, recipe)) {
+      const nutrition = amountsNutrition(amounts, practicalSweetener, recipe);
+      const exact = amountsNutrition(amounts, sweetener, recipe);
       if (Math.max(nutrition.caloriesKcal, exact.caloriesKcal) <= budget + optimizationPolicy.numericTolerance) {
         const result = score(nutrition),
-          deviation = adaptiveDeviation(amounts, config);
+          deviation = adaptiveDeviation(amounts, config, recipe);
         candidate = { amounts, nutrition, score: result, deviation, total: result.total + deviation };
         feasibleCandidates++;
       }
@@ -96,13 +129,13 @@ export function optimizeAdaptive(
   const allGreenBefore = macroKeys.every((key) => before[key] === "green");
   // Three deterministic starting points: minimum, legacy solution, and a calorie-lower-band recipe.
   // The minimum is componentwise cheapest, so if it cannot fit, no allowed recipe can fit.
-  const minimumAmounts = clamp(0);
+  const minimumAmounts = minimumAdaptiveAmounts(config, recipe);
   const minimum = evaluate(minimumAmounts);
   const starts = minimum
     ? [minimum]
     : ingredients
         .filter((i) => i.nutrition)
-        .map((i) => evaluate({ ...minimumAmounts, [i.id]: minimumAmounts[i.id] + 1 }))
+        .map((i) => evaluate({ ...minimumAmounts, [i.id]: quantity(minimumAmounts, i.id) + 1 }))
         .filter((candidate) => candidate !== null);
   if (!allGreenBefore && starts.length) {
     const seeds = [
@@ -121,14 +154,14 @@ export function optimizeAdaptive(
       for (const step of adaptiveSearchPolicy.steps) {
         for (let pass = 0; pass < adaptiveSearchPolicy.passesPerStep; pass++) {
           let next = current;
-          const consider = (amounts: GainerAmounts) => {
+          const consider = (amounts: RecipeAmounts) => {
             const candidate = evaluate(amounts);
             if (candidate && improves(candidate, next)) next = candidate;
           };
           for (const i of ingredients) {
             for (const direction of [-1, 1]) {
               const delta = step * direction;
-              consider({ ...current.amounts, [i.id]: current.amounts[i.id] + delta });
+              consider({ ...current.amounts, [i.id]: quantity(current.amounts, i.id) + delta });
               // Calorie-balanced pair exchanges can improve a recipe at a hard calorie ceiling.
               if (i.nutrition)
                 for (const j of ingredients) {
@@ -138,8 +171,8 @@ export function optimizeAdaptive(
                   for (const adjustment of new Set([Math.floor(exchange), Math.ceil(exchange)]))
                     consider({
                       ...current.amounts,
-                      [i.id]: current.amounts[i.id] + delta,
-                      [j.id]: current.amounts[j.id] - adjustment,
+                      [i.id]: quantity(current.amounts, i.id) + delta,
+                      [j.id]: quantity(current.amounts, j.id) - adjustment,
                     });
                 }
             }
@@ -177,22 +210,22 @@ export function optimizeAdaptive(
         id: i.id,
         name: i.name,
         ...(i.unit === "g"
-          ? { baseG: i.amount, practicalG: chosen.amounts[i.id] }
-          : { baseMl: i.amount, practicalMl: chosen.amounts[i.id] }),
-        factor: chosen.amounts[i.id] / i.amount,
+          ? { baseG: i.amount, practicalG: quantity(chosen.amounts, i.id) }
+          : { baseMl: i.amount, practicalMl: quantity(chosen.amounts, i.id) }),
+        factor: quantity(chosen.amounts, i.id) / i.amount,
       }))
     : [];
   const labels = { caloriesKcal: "calorías", proteinG: "proteína", carbsG: "carbohidratos", fatG: "grasa" };
   const low = macroKeys.filter((key) => before[key] === "low").map((key) => labels[key]);
   const high = macroKeys.filter((key) => before[key] === "high").map((key) => labels[key]);
   const scale = chosen
-    ? amountsNutrition(chosen.amounts, emptyMacros()).caloriesKcal / baseMixNutrition.caloriesKcal
+    ? amountsNutrition(chosen.amounts, emptyMacros(), recipe).caloriesKcal / baseMixNutrition.caloriesKcal
     : 0;
   const raised = chosen
-    ? ingredients.filter((i) => chosen.amounts[i.id] > i.amount * scale + 0.5).map((i) => i.name)
+    ? ingredients.filter((i) => quantity(chosen.amounts, i.id) > i.amount * scale + 0.5).map((i) => i.name)
     : [];
   const reduced = chosen
-    ? ingredients.filter((i) => chosen.amounts[i.id] < i.amount * scale - 0.5).map((i) => i.name)
+    ? ingredients.filter((i) => quantity(chosen.amounts, i.id) < i.amount * scale - 0.5).map((i) => i.name)
     : [];
   const reason = allGreenBefore
     ? "Las cuatro métricas ya están en verde; no hace falta añadir un batido."
@@ -235,10 +268,10 @@ export function optimizeAdaptive(
         fixedProportions: {
           nutrition: fixedNutrition,
           nutritionScore: score(fixedNutrition).total,
-          deviationPenalty: fixed.scaleFactor > 0 ? adaptiveDeviation(fixedAmounts, config) : 0,
+          deviationPenalty: fixed.scaleFactor > 0 ? adaptiveDeviation(fixedAmounts, config, recipe) : 0,
           withinAdaptiveBounds:
             fixed.scaleFactor > 0 &&
-            validAdaptiveAmounts(fixedAmounts, config) &&
+            validAdaptiveAmounts(fixedAmounts, config, recipe) &&
             fixedNutrition.caloriesKcal <= budget,
         },
         adaptiveNutritionScore: after.total,

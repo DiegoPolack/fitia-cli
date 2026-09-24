@@ -83,7 +83,17 @@ Stevia and creatine contribute zero kcal/macros in this model.
 
 ## Optional adaptive mode
 
-`fitia_adaptive` varies individual ingredient amounts; `fitia_optimal` and the
+Current `fitia_adaptive` uses the new [proportional Adaptive algorithm](adaptive-proportional.md):
+four main decisions within dynamic daily bounds, derived flavor ingredients/water,
+and discrete size-aware honey. Select `adaptive.strategy: legacy_v1` for the
+original algorithm described below. `fitia_optimal` remains unchanged.
+
+The historical recipe is now explicitly selected by `activeProfile: legacy_v1`.
+See [recipe profiles](gainer-recipe-profiles.md) for the inactive future-profile
+architecture, disabled Maltodex candidate and local compatibility verification.
+The fallback behavior described below is unchanged.
+
+Legacy `fitia_adaptive` varies individual ingredient amounts; `fitia_optimal` and the
 initial default remain unchanged. Both reuse the live core summary and verified
 carryover planning context. No nutrition/price data is copied or fetched from a
 second source. New config values resolve from defaults on read: no migration or

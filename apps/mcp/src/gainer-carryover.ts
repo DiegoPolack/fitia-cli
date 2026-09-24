@@ -1,21 +1,27 @@
 import type { CarryoverRecord, MealReference } from "@fitia/core/gainer/carryover";
-import { gainerRecipe, sweetenerModes } from "@fitia/core/gainer/recipe";
+import { sweetenerModes } from "@fitia/core/gainer/recipe";
 import type { CarryoverPlan } from "@fitia/core/gainer/serving";
 import { CliError, mealTypes } from "@fitia/core/runtime";
 import * as z from "zod/v4";
+import { profileIngredientIds } from "./gainer-config.ts";
 
 const date = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
 export const versionSchema = z.string().regex(/^(0|[1-9][0-9]{0,18})$/);
 const confirmation = { confirm: z.boolean().default(false), expectedVersion: versionSchema.optional() };
 export const carryoverDraftSchema = z.strictObject({
   sourceDate: date,
-  recipeId: z.literal(gainerRecipe.id),
+  recipeId: z.enum(["polack_labs_mass_gainer_v1", "polack_labs_mass_gainer_v2"]),
   scaleFactor: z.number().positive().max(35),
   sweetener: z.enum(sweetenerModes),
   nightPercent: z.number().int().min(1).max(99),
   configVersion: versionSchema,
-  adaptiveAmounts: z
-    .record(z.enum(gainerRecipe.ingredients.map((i) => i.id)), z.number().int().min(0).max(1000))
+  adaptiveAmounts: z.partialRecord(z.enum(profileIngredientIds), z.number().int().min(0).max(1000)).optional(),
+  adaptivePreparation: z
+    .strictObject({
+      version: z.literal("proportional_v2"),
+      baselineScaleFactor: z.number().positive().max(35),
+      honeyTablespoons: z.number().int().min(0).max(200),
+    })
     .optional(),
 });
 export const carryoverUpdateSchema = z

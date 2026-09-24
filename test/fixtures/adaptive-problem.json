@@ -1,0 +1,84 @@
+{
+  "description": "Synthetic equivalent of the reported physically imbalanced old recipe; not a real diary read.",
+  "input": {
+    "date": "2026-09-23",
+    "mode": "fitia_adaptive",
+    "sweetener": "honey_only"
+  },
+  "day": {
+    "date": "2026-09-23",
+    "updateTime": "synthetic-proportional-adaptive",
+    "goals": {
+      "caloriesKcal": 3000,
+      "proteinG": 110,
+      "carbsG": 400,
+      "fatG": 90
+    },
+    "consumed": {
+      "caloriesKcal": 2400,
+      "carbsG": 360,
+      "proteinG": 80,
+      "fatG": 70
+    },
+    "remaining": {
+      "caloriesKcal": 600,
+      "proteinG": 30,
+      "carbsG": 40,
+      "fatG": 20
+    },
+    "knownConsumed": {
+      "caloriesKcal": 0,
+      "proteinG": 0,
+      "carbsG": 0,
+      "fatG": 0
+    },
+    "meals": [],
+    "coverage": {
+      "complete": true,
+      "eatenEntries": 0,
+      "plannedEntries": 0,
+      "unknownStateEntries": 0,
+      "unknownEntries": [],
+      "calorieCheck": "matches",
+      "cachedNutrientsStatus": "absent"
+    },
+    "warnings": []
+  },
+  "legacy": {
+    "amounts": {
+      "quaker_oats": 11,
+      "anchor": 86,
+      "nestum": 5,
+      "seven_cereals": 3,
+      "maca": 4,
+      "cocoa": 8,
+      "cinnamon": 1,
+      "vanilla": 3
+    },
+    "nutrition": {
+      "caloriesKcal": 692.27,
+      "proteinG": 19.0155,
+      "carbsG": 116.3795,
+      "fatG": 18.2165
+    },
+    "water": {
+      "exactMl": 505.4794520547946,
+      "practicalMl": 510
+    },
+    "comparison": {
+      "scoringBasis": "both recipes evaluated with the adaptive nutrition weights; lower is better",
+      "fixedProportions": {
+        "nutrition": {
+          "caloriesKcal": 727.61,
+          "proteinG": 19.0465,
+          "carbsG": 130.4395,
+          "fatG": 14.5085
+        },
+        "nutritionScore": 0.11426205833333336,
+        "deviationPenalty": 0.0003737305681156816,
+        "withinAdaptiveBounds": true
+      },
+      "adaptiveNutritionScore": 0.09662815833333335
+    }
+  }
+}

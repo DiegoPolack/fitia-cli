@@ -42,14 +42,34 @@ test("MCP exposes bundled skill in initialization/resource and strict gainer sch
       "fitia_adaptive",
     );
     expect(resource).toContain("fitia_adaptive");
+    expect(resource).toContain("legacy_v1");
     const update = tools.find((t: any) => t.name === "fitia-gainer-config-update");
     expect(update.inputSchema.properties.confirm.default).toBe(false);
     expect(update.inputSchema.additionalProperties).toBe(false);
     expect(update._meta.securitySchemes[0].scopes).toEqual(["fitia:read", "fitia:write"]);
+    expect(update.inputSchema.properties.patch.properties.activeProfile.enum).toEqual(["legacy_v1", "future_v2"]);
+    expect(JSON.stringify(update.inputSchema)).toContain("gramsPer100MlWater");
+    expect(JSON.stringify(update.inputSchema)).toContain("maltodex");
+    expect(update.inputSchema.properties.patch.properties.adaptive.properties.strategy.enum).toEqual([
+      "legacy_v1",
+      "proportional_v2",
+    ]);
+    expect(JSON.stringify(update.inputSchema)).toContain("ingredientDeviation");
+    expect(resource).toContain("proportional_v2");
+    const config = await rpc.request("tools/call", { name: "fitia-gainer-config-get", arguments: {} });
+    expect(JSON.parse(config.result.content[0].text)).toMatchObject({
+      config: {
+        activeProfile: "legacy_v1",
+        recipeProfiles: {
+          legacy_v1: { ingredients: { maltodex: { enabled: false, nutrition: { macros: { proteinG: null } } } } },
+        },
+      },
+    });
     const carryoverUpdate = tools.find((t: any) => t.name === "fitia-gainer-carryover-update");
     expect(carryoverUpdate.inputSchema.type).toBe("object");
     expect(carryoverUpdate.inputSchema.additionalProperties).toBe(false);
     expect(carryoverUpdate.inputSchema.properties.confirm.default).toBe(false);
+    expect(JSON.stringify(carryoverUpdate.inputSchema)).toContain("adaptivePreparation");
     expect(carryoverUpdate._meta.securitySchemes[0].scopes).toEqual(["fitia:read", "fitia:write"]);
   } finally {
     await rpc.close();

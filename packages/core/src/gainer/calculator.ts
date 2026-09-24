@@ -10,17 +10,21 @@ import {
   round,
 } from "../nutrition.ts";
 import { optimizeAdaptive } from "./adaptive.ts";
+import { optimizeProportionalAdaptive, proportionalHoney } from "./adaptive-proportional.ts";
 import { type CarryoverContext, carryoverContext, planningDay } from "./carryover.ts";
 import { greenRanges, optimizeGainer } from "./optimization.ts";
-import { amountsNutrition, drySolidsG, portionNutrition, roundedMacros as rounded, scaleMacros } from "./portion.ts";
 import {
-  baseMixNutrition,
-  type GainerConfig,
-  type GainerMode,
-  gainerRecipe,
-  type SweetenerMode,
-  sweetenerModes,
-} from "./recipe.ts";
+  amountsNutrition,
+  fitsProfile,
+  portionNutrition,
+  quantity,
+  roundedMacros as rounded,
+  scaledAmounts,
+  scaleMacros,
+  waterForAmounts,
+} from "./portion.ts";
+import { type ProfileIngredientId, resolveRecipe } from "./profiles.ts";
+import { type GainerConfig, type GainerMode, gainerRecipe, type SweetenerMode, sweetenerModes } from "./recipe.ts";
 import { type CarryoverDraft, makeCarryoverPlan, nightPercentage, servingPolicy } from "./serving.ts";
 
 export interface GainerInput {
@@ -38,6 +42,8 @@ function project(day: DaySummary, nutrition: Macros) {
 }
 
 function calculateBatch(input: GainerInput, config: GainerConfig, day: DaySummary) {
+  const recipe = resolveRecipe(config),
+    baseMixNutrition = recipe.baseNutrition;
   validateDate(input.date);
   if (day.date !== input.date)
     throw new CliError(
@@ -62,7 +68,19 @@ function calculateBatch(input: GainerInput, config: GainerConfig, day: DaySummar
   const resolved = !input.sweetener || input.sweetener === "auto" ? config.sweetenerInventory : input.sweetener;
   const ranges = greenRanges(day.goals);
   const context = {
-    recipeId: gainerRecipe.id,
+    recipeProfile: {
+      activeProfile: recipe.profileId,
+      enabledIngredients: recipe.ingredients.map((i) => i.id),
+      disabledIngredients: Object.entries(config.recipeProfiles[config.activeProfile]!.ingredients)
+        .filter(([, i]) => !i?.enabled)
+        .map(([id]) => id),
+      effectiveBaseAmounts: Object.fromEntries(
+        recipe.ingredients.map((i) => [i.id, { amount: i.amount, unit: i.unit }]),
+      ),
+      waterMode: recipe.waterMode,
+      ...(recipe.anchorWaterRatio && { anchorWaterRatio: recipe.anchorWaterRatio }),
+    },
+    recipeId: recipe.id,
     date: input.date,
     mode,
     fitia: day,
@@ -82,12 +100,13 @@ function calculateBatch(input: GainerInput, config: GainerConfig, day: DaySummar
   if (resolved === "unknown")
     return { ...stop("needs_input", "¿Tienes stevia, miel, ambos o ninguno?"), options: sweetenerModes };
   const configured = gainerRecipe.sweeteners[resolved];
-  const honeyG = configured.honeyTablespoons * config.honeyGramsPerTablespoon;
-  const sweetNutrition = scaleMacros(config.honeyProfile.per100G, honeyG / 100);
-  const practicalSweetNutrition = scaleMacros(config.honeyProfile.per100G, Math.round(honeyG) / 100);
-  const sweetener = {
+  let honeyG = configured.honeyTablespoons * config.honeyGramsPerTablespoon;
+  let sweetNutrition = scaleMacros(config.honeyProfile.per100G, honeyG / 100);
+  let practicalSweetNutrition = scaleMacros(config.honeyProfile.per100G, Math.round(honeyG) / 100);
+  let sweetener = {
     mode: resolved,
     ...configured,
+    honeyTablespoons: Number(configured.honeyTablespoons),
     honeyG,
     practicalHoneyG: Math.round(honeyG),
     ...rounded(sweetNutrition),
@@ -109,10 +128,33 @@ function calculateBatch(input: GainerInput, config: GainerConfig, day: DaySummar
     };
   const optimization =
     mode === "fitia_adaptive" && ranges
-      ? optimizeAdaptive(day.consumed as Macros, ranges, sweetNutrition, practicalSweetNutrition, config.adaptive)
+      ? recipe.adaptive.strategy === "proportional_v2"
+        ? optimizeProportionalAdaptive(day.consumed as Macros, ranges, resolved, config, recipe)
+        : optimizeAdaptive(
+            day.consumed as Macros,
+            ranges,
+            sweetNutrition,
+            practicalSweetNutrition,
+            recipe.adaptive,
+            recipe,
+          )
       : mode === "fitia_optimal" && ranges
-        ? optimizeGainer(day.consumed as Macros, ranges, sweetNutrition, practicalSweetNutrition)
+        ? optimizeGainer(day.consumed as Macros, ranges, sweetNutrition, practicalSweetNutrition, recipe)
         : undefined;
+  const proportional = optimization?.mode === "fitia_adaptive" && "preparation" in optimization ? optimization : null;
+  if (proportional?.preparation) {
+    const selected = proportionalHoney(proportional.preparation.honeyTablespoons, config);
+    honeyG = selected.honeyG;
+    sweetNutrition = selected.exact;
+    practicalSweetNutrition = selected.practical;
+    sweetener = {
+      ...sweetener,
+      honeyTablespoons: proportional.preparation.honeyTablespoons,
+      honeyG,
+      practicalHoneyG: selected.practicalHoneyG,
+      ...rounded(sweetNutrition),
+    };
+  }
   const budget = optimization?.maxAdditionalCaloriesKcal ?? target;
   if (optimization?.outcome === "not_needed")
     return { ...stop("not_recommended", optimization.reason), targetCaloriesKcal: target, sweetener, optimization };
@@ -126,7 +168,7 @@ function calculateBatch(input: GainerInput, config: GainerConfig, day: DaySummar
       sweetener,
       ...(optimization && { optimization }),
     };
-  if (sweetNutrition.caloriesKcal > budget)
+  if (!proportional && sweetNutrition.caloriesKcal > budget)
     return {
       ...stop(
         "sweetener_exceeds_target",
@@ -144,14 +186,14 @@ function calculateBatch(input: GainerInput, config: GainerConfig, day: DaySummar
   const scale = optimization?.scaleFactor ?? (target - sweetNutrition.caloriesKcal) / baseMixNutrition.caloriesKcal;
   const limitingFactors = optimization?.outcome === "limited_by_calories" ? ["caloriesKcal"] : [];
   const adaptiveAmounts = optimization?.mode === "fitia_adaptive" ? optimization.amounts : null;
-  const amount = (id: (typeof gainerRecipe.ingredients)[number]["id"], base: number) =>
-    adaptiveAmounts?.[id] ?? base * scale;
-  const ingredients = gainerRecipe.ingredients.map((i) => ({
+  const practicalAmounts = adaptiveAmounts ?? scaledAmounts(scale, recipe);
+  const amount = (id: ProfileIngredientId, base: number) => adaptiveAmounts?.[id] ?? base * scale;
+  const ingredients = recipe.ingredients.map((i) => ({
     id: i.id,
     name: i.name,
     ...(i.unit === "g"
-      ? { exactG: amount(i.id, i.amount), practicalG: Math.round(amount(i.id, i.amount)) }
-      : { exactMl: amount(i.id, i.amount), practicalMl: Math.round(amount(i.id, i.amount)) }),
+      ? { exactG: amount(i.id, i.amount), practicalG: quantity(practicalAmounts, i.id) }
+      : { exactMl: amount(i.id, i.amount), practicalMl: quantity(practicalAmounts, i.id) }),
   }));
   if (scale <= 0 || !ingredients.some((i) => "practicalG" in i && i.practicalG > 0))
     return {
@@ -165,18 +207,31 @@ function calculateBatch(input: GainerInput, config: GainerConfig, day: DaySummar
     };
   const { exact, practical } = adaptiveAmounts
     ? {
-        exact: amountsNutrition(adaptiveAmounts, sweetNutrition),
-        practical: amountsNutrition(adaptiveAmounts, practicalSweetNutrition),
+        exact: amountsNutrition(adaptiveAmounts, sweetNutrition, recipe),
+        practical: amountsNutrition(adaptiveAmounts, practicalSweetNutrition, recipe),
       }
-    : portionNutrition(scale, sweetNutrition, practicalSweetNutrition);
-  const waterMl = adaptiveAmounts
-    ? drySolidsG(adaptiveAmounts) * config.adaptive.waterMlPerDryGram
-    : gainerRecipe.waterMl * scale;
+    : portionNutrition(scale, sweetNutrition, practicalSweetNutrition, recipe);
+  if (
+    !fitsProfile(practicalAmounts, practical, recipe) ||
+    (recipe.profileId !== "legacy_v1" && exact.caloriesKcal > recipe.adaptive.maxBatchCaloriesKcal)
+  )
+    return {
+      ...stop("not_recommended", "La porción solicitada no cumple los límites prácticos del perfil activo."),
+      sweetener,
+      targetCaloriesKcal: target,
+      ...(optimization && { optimization }),
+    };
+  const waterMl =
+    proportional?.adaptive.derivedIngredients?.waterMl ??
+    (adaptiveAmounts || recipe.waterMode !== "legacy"
+      ? waterForAmounts(practicalAmounts, recipe)
+      : recipe.waterMl * scale);
   let pen = 0,
     practicalPen = 0;
-  for (const i of gainerRecipe.ingredients) {
+  for (const i of recipe.ingredients) {
+    if (!i.price) continue;
     pen += (amount(i.id, i.amount) * i.price.pen) / i.price.packageAmount;
-    practicalPen += (Math.round(amount(i.id, i.amount)) * i.price.pen) / i.price.packageAmount;
+    practicalPen += (quantity(practicalAmounts, i.id) * i.price.pen) / i.price.packageAmount;
   }
   const projection = project(day, exact),
     practicalProjection = project(day, practical);
@@ -216,6 +271,15 @@ function calculateBatch(input: GainerInput, config: GainerConfig, day: DaySummar
     reason:
       optimization?.reason ?? "Porción calculada para el objetivo calórico indicado; revisa el impacto en los macros.",
     ...(optimization && { optimization }),
+    scoringComponents: optimization
+      ? {
+          nutritionScore:
+            optimization.mode === "fitia_adaptive" ? optimization.score.nutritionAfter : optimization.score.after,
+          deviationPenalty: optimization.mode === "fitia_adaptive" ? optimization.adaptive.deviationPenalty : 0,
+          costPenalty: 0,
+          practicalityPenalty: 0,
+        }
+      : null,
     targetCaloriesKcal: target,
     sweetener,
     baseMix: {
@@ -227,7 +291,7 @@ function calculateBatch(input: GainerInput, config: GainerConfig, day: DaySummar
     },
     ingredients,
     water: { exactMl: waterMl, practicalMl: Math.round(waterMl / 10) * 10 },
-    creatineG: gainerRecipe.creatineG,
+    creatineG: recipe.creatineG,
     nutrition: exact,
     practicalNutrition: practical,
     cost: {
@@ -235,7 +299,13 @@ function calculateBatch(input: GainerInput, config: GainerConfig, day: DaySummar
       practicalPen: round(practicalPen),
       totalPen: null,
       scope: "base_mix_subtotal",
-      excluded: ["honey", "stevia", "creatine", "water_ice"],
+      excluded: [
+        "honey",
+        "stevia",
+        "creatine",
+        "water_ice",
+        ...recipe.ingredients.filter((i) => !i.price).map((i) => i.id),
+      ],
     },
     nutritionAssumptions: [
       "Cinnamon and vanilla nutrition excluded: no supplied labels.",
@@ -246,13 +316,13 @@ function calculateBatch(input: GainerInput, config: GainerConfig, day: DaySummar
     warnings,
     suggestedMealLog: {
       date: input.date,
-      name: `${gainerRecipe.name}${adaptiveAmounts ? " adaptive" : ""} (${resolved}, rounded serving)`,
+      name: `${recipe.name}${adaptiveAmounts ? " adaptive" : ""} (${resolved}, rounded serving)`,
       ...practical,
       confirm: false,
     },
     exactMealLog: {
       date: input.date,
-      name: `${gainerRecipe.name}${adaptiveAmounts ? " adaptive" : ""} (${resolved}, exact serving)`,
+      name: `${recipe.name}${adaptiveAmounts ? " adaptive" : ""} (${resolved}, exact serving)`,
       ...exact,
       confirm: false,
     },
@@ -267,12 +337,17 @@ function calculateServing(input: GainerInput, config: GainerConfig, day: DaySumm
     return { ...result, servingStrategy: "single_serving" as const };
   const draft: CarryoverDraft = {
     sourceDate: input.date,
-    recipeId: gainerRecipe.id,
+    recipeId: result.recipeId,
     scaleFactor: result.baseMix.scaleFactor,
     sweetener: result.sweetener.mode,
     nightPercent: nightPercentage(result.practicalNutrition, config, day),
     ...(result.optimization?.mode === "fitia_adaptive" && result.optimization.amounts
       ? { adaptiveAmounts: result.optimization.amounts }
+      : {}),
+    ...(result.optimization?.mode === "fitia_adaptive" &&
+    "preparation" in result.optimization &&
+    result.optimization.preparation
+      ? { adaptivePreparation: result.optimization.preparation }
       : {}),
   };
   const plan = makeCarryoverPlan(draft, config);

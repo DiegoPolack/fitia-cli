@@ -1,14 +1,18 @@
 import { afterAll, beforeAll, expect, test } from "bun:test";
 import { readFile } from "node:fs/promises";
 import { PGlite } from "@electric-sql/pglite";
+import { calculateGainer } from "@fitia/core/gainer/calculator";
 import { amountsNutrition } from "@fitia/core/gainer/portion";
 import { baseMixNutrition, defaultGainerConfig } from "@fitia/core/gainer/recipe";
 import { makeCarryoverPlan } from "@fitia/core/gainer/serving";
+import type { DaySummary } from "@fitia/core/nutrition";
+import type { GainerConfigPatch } from "../apps/mcp/src/gainer-config.ts";
 import { decryptJson, importEncryptionKey, randomCode } from "../apps/mcp/src/remote/crypto.ts";
 import { GainerCarryoverRepository } from "../apps/mcp/src/remote/gainer-carryover.ts";
 import { GainerConfigRepository } from "../apps/mcp/src/remote/gainer-config.ts";
 import { remoteWriteJournal } from "../apps/mcp/src/remote/journal.ts";
 import { type DatabaseRunner, type FitiaSession, SessionRepository } from "../apps/mcp/src/remote/sessions.ts";
+import adaptiveProblem from "./fixtures/adaptive-problem.json";
 
 const db = new PGlite();
 const database: DatabaseRunner = {
@@ -301,6 +305,74 @@ test("gainer kill switch permits previews but blocks confirmed settings", async 
   await expect(store.update({ sweetenerInventory: "none" }, true, "0")).rejects.toThrow("disabled");
   expect((await store.get()).persisted).toBe(false);
 });
+
+test("old stored JSON normalizes profiles on read without rewriting the row", async () => {
+  const user = "profile-old-json";
+  await db.query("INSERT INTO fitia_gainer_config (clerk_user_id, config) VALUES ($1,$2::jsonb)", [
+    user,
+    JSON.stringify({
+      sweetenerInventory: "honey_only",
+      adaptive: { bounds: { nestum: { minFactor: 0.25, maxFactor: 5 } } },
+    }),
+  ]);
+  const before = await db.query("SELECT * FROM fitia_gainer_config WHERE clerk_user_id=$1", [user]);
+  const config = (await configRepository(user).get()).config;
+  expect(config.activeProfile).toBe("legacy_v1");
+  expect(config.recipeProfiles.future_v2).toBeUndefined();
+  expect(config.recipeProfiles.legacy_v1.ingredients.maltodex!.enabled).toBe(false);
+  expect(config.adaptive.bounds.nestum.maxFactor).toBe(5);
+  expect((await db.query("SELECT * FROM fitia_gainer_config WHERE clerk_user_id=$1", [user])).rows).toEqual(
+    before.rows,
+  );
+});
+
+test("inactive future profile patches retain preview, strict JSONB readback, version and identity isolation", async () => {
+  const user = "profile-owner",
+    store = configRepository(user);
+  const patch: GainerConfigPatch = {
+    recipeProfiles: {
+      future_v2: {
+        ingredients: { quaker_oats: { baseAmount: 70 }, maltodex: { price: { pen: 76.45, packageAmount: 5000 } } },
+      },
+    },
+  };
+  const before = await store.get();
+  const preview = await store.update(patch, false);
+  expect(preview).toMatchObject({
+    status: "preview",
+    fieldsChanged: ["recipeProfiles"],
+    after: { activeProfile: "legacy_v1" },
+  });
+  expect(await store.get()).toEqual(before);
+  await expect(store.update(patch, true)).rejects.toThrow("preview version");
+  expect(await store.update(patch, true, "0")).toMatchObject({ status: "committed", serverVerified: true });
+  expect(await store.update(patch, true, "1")).toMatchObject({ status: "already-present" });
+  const saved = await store.get();
+  expect(saved.version).toBe("1");
+  expect(saved.config.recipeProfiles.future_v2!.ingredients.quaker_oats!.baseAmount).toBe(70);
+  expect(saved.config.recipeProfiles.future_v2!.ingredients.maltodex!.nutrition!.macros.proteinG).toBeNull();
+  expect(saved.config.sweetenerInventory).toBe(before.config.sweetenerInventory);
+  expect(saved.config.defaultMode).toBe(before.config.defaultMode);
+  expect(saved.config.adaptive).toEqual(before.config.adaptive);
+  expect((await configRepository("profile-other").get()).config.recipeProfiles.future_v2).toBeUndefined();
+  await expect(
+    store.update({ recipeProfiles: { future_v2: { ingredients: { maltodex: { enabled: true } } } } }, false),
+  ).rejects.toThrow("proteinG");
+  await expect(store.update({ activeProfile: "future_v2" }, false)).rejects.toThrow("water_ratio");
+  expect(await store.get()).toEqual(saved);
+  const audits = await db.query<{ id: string; ciphertext: Uint8Array; iv: Uint8Array }>(
+    "SELECT id,ciphertext,iv FROM fitia_write_audit WHERE clerk_user_id=$1 ORDER BY created_at",
+    [user],
+  );
+  expect(audits.rows).toHaveLength(2);
+  const audit = audits.rows[0]!;
+  expect(await decryptJson(key, audit.ciphertext, audit.iv, `audit:${user}:${session.uid}:${audit.id}`)).toMatchObject({
+    after: {
+      activeProfile: "legacy_v1",
+      recipeProfiles: { future_v2: { ingredients: { quaker_oats: { baseAmount: 70 } } } },
+    },
+  });
+});
 test("gainer rejects invalid persisted config and empty patches instead of defaulting", async () => {
   await db.query("INSERT INTO fitia_gainer_config (clerk_user_id, config) VALUES ($1,$2::jsonb)", [
     "user_corrupt",
@@ -451,4 +523,47 @@ test("adaptive carryover snapshot roundtrips actual ingredients and config witho
     "UPDATE fitia_gainer_carryover SET definition = definition #- '{config,adaptive}' WHERE clerk_user_id = 'legacy-no-adaptive'",
   );
   expect((await legacy.list(carryPlan.targetDate))[0]!.id).toBe(carryPlan.id);
+});
+
+test("proportional Adaptive config and versioned carryover roundtrip JSONB without reinterpreting saved batches", async () => {
+  const user = "proportional-owner",
+    store = configRepository(user),
+    carry = carryRepository(user);
+  const before = await store.get();
+  const patch: GainerConfigPatch = {
+    adaptive: { strategy: "proportional_v2", ingredientDeviation: { anchor: 0.2 }, waterMlPerMainDryGram: 5 },
+    preferredNightCaloriesKcal: 300,
+    maxNightCaloriesKcal: 350,
+  };
+  expect(await store.update(patch, false)).toMatchObject({
+    status: "preview",
+    after: { adaptive: { ingredientDeviation: { quaker_oats: 0.3, anchor: 0.2, nestum: 0.3, seven_cereals: 0.3 } } },
+  });
+  expect(await store.get()).toEqual(before);
+  await expect(store.update(patch, true)).rejects.toThrow("preview version");
+  expect(await store.update(patch, true, "0")).toMatchObject({ status: "committed", serverVerified: true });
+  const saved = await store.get();
+  expect(saved.config.defaultMode).toBe(before.config.defaultMode);
+  expect(saved.config.sweetenerInventory).toBe(before.config.sweetenerInventory);
+  const result = calculateGainer(
+    { date: adaptiveProblem.day.date, mode: "fitia_adaptive", sweetener: "honey_only" },
+    saved.config,
+    adaptiveProblem.day as DaySummary,
+  );
+  if (!("carryoverDraft" in result)) throw new Error("Expected synthetic proportional split");
+  const plan = makeCarryoverPlan(result.carryoverDraft, saved.config);
+  expect(await carry.update({ action: "save", plan, confirm: false }, noEntry)).toMatchObject({ status: "preview" });
+  expect(await carry.list(plan.targetDate)).toEqual([]);
+  await carry.update({ action: "save", plan, confirm: true, expectedVersion: "0" }, noEntry);
+  const later: GainerConfigPatch = {
+    adaptive: { strategy: "legacy_v1", ingredientDeviation: { anchor: 0.1 }, waterMlPerMainDryGram: 10 },
+  };
+  await store.update(later, false);
+  await store.update(later, true, "1");
+  const restored = (await carry.list(plan.targetDate))[0]!;
+  expect(restored.id).toBe(result.carryoverId);
+  expect(restored.fullBatch).toEqual(plan.fullBatch);
+  expect(restored.definition.draft.adaptivePreparation).toEqual(result.carryoverDraft.adaptivePreparation);
+  expect(restored.definition.config.adaptive.waterMlPerMainDryGram).toBe(5);
+  expect(await carryRepository("proportional-other").list(plan.targetDate)).toEqual([]);
 });
